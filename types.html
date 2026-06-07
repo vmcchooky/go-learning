@@ -20,60 +20,107 @@
   <div id="types-cards" class="topic-grid">
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Kiểu số & string</div><div class="topic-desc">int, float64, complex, rune, byte, string immutability</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Kiểu số, bool & literals</div><div class="topic-desc">int, uint, float, complex, bool, numeric literals và conversion</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">int8/16/32/64</span><span class="tag">float32/64</span><span class="tag">rune</span><span class="tag">byte</span><span class="level-badge level-basic">cơ bản</span></div>
-<pre><code class="language-go">// Integer types
-var a int8   = 127    // -128 đến 127
-var b uint64 = 1&lt;&lt;63  // unsigned
-var c int           // 32 hoặc 64 bit, tùy kiến trúc
-var d uintptr       // chứa địa chỉ dạng số; chỉ dùng cùng unsafe khi thật cần
+        <div class="tag-list"><span class="tag">int8/16/32/64</span><span class="tag">float32/64</span><span class="tag">complex</span><span class="tag">bool</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">var a int8 = 127         // -128..127
+var b uint64 = 1 &lt;&lt; 63  // unsigned
+var c int = 42          // 32 hoặc 64 bit tùy kiến trúc
+var f32 float32 = 3.14
+var f64 float64 = 3.1415926535
+z := complex(2, 3)      // 2 + 3i
+ok := true
 
-// String — immutable, UTF-8
-s := "Hello, 世界"
-len(s)          // bytes, không phải runes!
-utf8.RuneCountInString(s) // số ký tự thực
+hex := 0xff
+bin := 0b1010
+sep := 1_000_000
 
-// rune = int32 (Unicode code point)
-r := 'A'         // rune literal
-rs := []rune(s) // convert để thao tác ký tự
+fmt.Println(5 / 2)          // 2: chia số nguyên bị cắt phần lẻ
+fmt.Println(float64(5) / 2) // 2.5
 
-// String builder (hiệu quả hơn concatenation)
-var sb strings.Builder
-sb.WriteString("Hello")
-result := sb.String()</code></pre>
+var x int = 10
+var y int64 = int64(x) // conversion phải explicit</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Go có hệ kiểu số khá rõ ràng: integer, unsigned integer, floating-point, complex, và bool. Phép chuyển kiểu giữa các loại số gần như luôn phải viết explicit.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>int</code> và <code>uint</code> phụ thuộc kiến trúc máy. Nếu dữ liệu cần kích thước cố định khi lưu file, network, hoặc binary format, hãy ưu tiên các kiểu như <code>int32</code>, <code>uint64</code>.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người mới bị bất ngờ vì <code>5 / 2</code> cho ra <code>2</code> chứ không phải <code>2.5</code>. Overflow cũng có thể xảy ra nếu chọn kiểu quá nhỏ như <code>int8</code>.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng <code>int</code> cho tính toán thông thường trong app. Dùng kiểu width cố định khi cần format dữ liệu rõ ràng hoặc tương thích hệ thống khác.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Type alias & defined types</div><div class="topic-desc">type MyInt int, type alias = , type assertion</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">String, byte & rune</div><div class="topic-desc">UTF-8, immutability, len theo byte, rune theo code point</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">type</span><span class="tag">alias</span><span class="tag">conversion</span><span class="level-badge level-inter">trung cấp</span></div>
-<pre><code class="language-go">// Defined type — type mới, không tương thích
+        <div class="tag-list"><span class="tag">string</span><span class="tag">byte</span><span class="tag">rune</span><span class="tag">UTF-8</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">s := "Hello, 世界"
+
+fmt.Println(len(s))                    // số bytes, không phải số ký tự
+fmt.Println(utf8.RuneCountInString(s)) // số rune thực
+
+b := s[0]          // byte đầu tiên: 'H'
+r := '世'          // rune literal = int32
+rs := []rune(s)    // convert để sửa theo ký tự
+rs[0] = 'h'
+s2 := string(rs)
+
+raw := `C:\Go\learn` // raw string literal
+
+for i, r := range s {
+    fmt.Println(i, r)
+}</code></pre>
+        <div class="note"><strong>Ý chính:</strong> String trong Go là immutable và được lưu dưới dạng UTF-8. <code>byte</code> thường đại diện cho dữ liệu nhị phân hoặc ASCII, còn <code>rune</code> đại diện cho Unicode code point.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>len(s)</code> trả về số bytes. Nếu cần đếm ký tự Unicode, dùng <code>utf8.RuneCountInString</code> hoặc chuyển sang <code>[]rune</code>.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Sửa trực tiếp <code>s[0]</code> là không hợp lệ vì string immutable. Người mới cũng hay nhầm một ký tự Unicode luôn bằng một byte, nhưng UTF-8 có thể dùng nhiều byte cho một rune.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng <code>string</code> cho text, <code>[]byte</code> cho I/O, file, network, hoặc dữ liệu cần mutate theo byte.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Type alias, defined type & conversion</div><div class="topic-desc">type T U, type T = U, conversion, parsing và string conversion</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">type</span><span class="tag">alias</span><span class="tag">conversion</span><span class="tag">parsing</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">// Defined type — tạo type mới
 type Celsius float64
 type Fahrenheit float64
 
 var c Celsius = 100
-// var f Fahrenheit = c  // ERROR: không thể gán trực tiếp
-var f Fahrenheit = Fahrenheit(c * 9/5 + 32) // explicit convert
+// var f Fahrenheit = c // ERROR: khác type
+var f Fahrenheit = Fahrenheit(c*9/5 + 32)
 
-// Type alias — hoàn toàn giống nhau
-type MyInt = int       // alias với =
+// Type alias — hoàn toàn giống type gốc
+type MyInt = int
 var x MyInt = 5
-var y int = x           // OK: cùng type
+var y int = x // OK
 
-// Type assertion
-var i interface{} = "hello"
-s, ok := i.(string)    // ok = true
-n, ok := i.(int)       // ok = false, n = 0</code></pre>
+// Conversion khác với parsing
+n := int64(42)
+s := strconv.FormatInt(n, 10) // "42"
+i, err := strconv.Atoi("123")
+_ = i
+_ = err
+
+// Cẩn thận: string(65) = "A", không phải "65"
+fmt.Println(string(65))</code></pre>
+        <div class="note"><strong>Ý chính:</strong> <code>type T U</code> tạo một type mới, còn <code>type T = U</code> chỉ tạo alias cho type cũ. Conversion là đổi representation theo quy tắc ngôn ngữ, còn parsing là đọc dữ liệu text thành giá trị.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Hai defined type khác nhau không gán trực tiếp cho nhau dù cùng underlying type. Khi muốn chuyển, phải viết explicit conversion.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người nhầm <code>string(65)</code> với `"65"`, nhưng kết quả là ký tự Unicode tương ứng, tức `"A"`. Muốn đổi số thành chuỗi số, dùng <code>strconv</code> hoặc <code>fmt</code>.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng defined type khi muốn tạo ngữ nghĩa riêng cho domain như <code>UserID</code>, <code>Celsius</code>. Dùng alias khi cần tương thích ngược hoặc đổi tên type mà vẫn giữ nguyên identity.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Type switch</div><div class="topic-desc">switch v.(type) — xử lý nhiều loại interface</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Type assertion & type switch</div><div class="topic-desc">i.(T), comma-ok, switch v.(type) với interface values</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">type switch</span><span class="tag">interface</span><span class="level-badge level-inter">trung cấp</span></div>
-<pre><code class="language-go">func describe(i any) string {
+        <div class="tag-list"><span class="tag">type assertion</span><span class="tag">type switch</span><span class="tag">interface</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">var v any = "hello"
+
+s := v.(string)         // OK nếu chắc chắn đúng type
+s2, ok := v.(string)    // comma-ok an toàn hơn
+n, ok := v.(int)        // ok = false, n = 0
+_ = s
+_ = s2
+_ = n
+
+func describe(i any) string {
     switch v := i.(type) {
     case int:
         return fmt.Sprintf("int: %d", v)
@@ -87,13 +134,17 @@ n, ok := i.(int)       // ok = false, n = 0</code></pre>
         return fmt.Sprintf("unknown: %T", v)
     }
 }</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Type assertion và type switch chỉ áp dụng cho giá trị interface như <code>any</code>. Chúng cho phép lấy giá trị concrete bên trong interface khi bạn cần xử lý theo type thực tế.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>v.(T)</code> sẽ panic nếu giá trị bên trong không phải <code>T</code>. Nếu không chắc chắn, hãy dùng dạng <code>x, ok := v.(T)</code>.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người cố assertion trên biến không phải interface, hoặc quên comma-ok rồi gặp panic ở runtime.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng khi làm việc với API nhận <code>any</code>, decode dữ liệu động, middleware, reflection-lite, hoặc xử lý nhiều loại giá trị trong cùng một luồng.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Comparable & constraints</div><div class="topic-desc">comparable, ordered, any, union types, underlying type</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Comparable, any & constraints</div><div class="topic-desc">comparable, any, union types, underlying type với ~</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">comparable</span><span class="tag">any</span><span class="tag">constraints</span><span class="level-badge level-inter">trung cấp</span></div>
+        <div class="tag-list"><span class="tag">comparable</span><span class="tag">any</span><span class="tag">constraints</span><span class="tag">~</span><span class="level-badge level-inter">trung cấp</span></div>
 <pre><code class="language-go">// any = interface{}
 func Print(v any) { fmt.Println(v) }
 
@@ -101,50 +152,62 @@ func Print(v any) { fmt.Println(v) }
 // slice, map, func KHÔNG comparable
 func Contains[T comparable](slice []T, item T) bool {
     for _, v := range slice {
-        if v == item { return true }
+        if v == item {
+            return true
+        }
     }
     return false
 }
 
 // Union constraint
 type Number interface {
-    int | int32 | int64 | float32 | float64
+    ~int | ~int32 | ~int64 | ~float32 | ~float64
 }
 
 // Underlying type với ~
 type MyInt int
 type Integer interface { ~int }
 // MyInt thỏa mãn Integer vì underlying = int</code></pre>
+        <div class="note"><strong>Ý chính:</strong> <code>any</code> là alias của <code>interface{}</code>. Trong generics, constraints giúp mô tả tập type được phép dùng làm type parameter.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>comparable</code> dùng cho các type có thể so sánh bằng <code>==</code> và <code>!=</code>. <code>~T</code> nghĩa là chấp nhận mọi type có underlying type là <code>T</code>.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> <code>slice</code>, <code>map</code>, và <code>func</code> không thỏa <code>comparable</code>. Nhiều người cũng nhầm <code>any</code> là “dynamic typing”, nhưng Go vẫn kiểm tra type rất chặt.</div>
+        <div class="note"><strong>Đọc sau:</strong> Khi dùng generics thực tế, bạn sẽ gặp thêm các constraints như <code>cmp.Ordered</code> hoặc custom constraints theo domain của project.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Channel types</div><div class="topic-desc">chan, chan&lt;-, &lt;-chan, buffered/unbuffered</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Channel types</div><div class="topic-desc">chan, chan&lt;-, &lt;-chan, buffered/unbuffered, nil và close</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
         <div class="tag-list"><span class="tag">chan</span><span class="tag">buffered</span><span class="tag">directional</span><span class="level-badge level-inter">trung cấp</span></div>
-<pre><code class="language-go">// Unbuffered: sync communication
+<pre><code class="language-go">var nilCh chan int // zero value = nil
+_ = nilCh
+
+// Unbuffered: send/receive phải bắt tay trực tiếp
 ch := make(chan int)
 
-// Buffered: async up to capacity
-bch := make(chan string, 10)
+// Buffered: chứa được tối đa capacity phần tử
+bch := make(chan string, 2)
+bch &lt;- "a"
+bch &lt;- "b"
+close(bch)
 
 // Directional channels
 var send chan&lt;- int = ch  // send-only
 var recv &lt;-chan int = ch  // receive-only
+_ = send
+_ = recv
 
-// Range over channel
-go func() {
-    for v := range ch { // block cho đến khi close
-        fmt.Println(v)
-    }
-}()
+for v := range bch { // đọc đến khi channel bị close
+    fmt.Println(v)
+}
 
 // Check if channel has value
-select {
-case v, ok := &lt;-ch:
-    if !ok { /* channel closed */ }
-default: // non-blocking
-}</code></pre>
+v, ok := &lt;-bch // sau khi close và đọc hết: v = zero value, ok = false
+fmt.Println(v, ok)</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Channel là một type cốt lõi của Go cho giao tiếp giữa goroutines. Unbuffered channel đồng bộ send/receive, còn buffered channel cho phép chứa tạm một số phần tử.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Receive từ channel đã đóng sẽ trả về zero value cùng <code>ok = false</code>. <code>range ch</code> sẽ dừng khi channel bị đóng.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Gửi vào channel đã đóng sẽ panic. Gửi/nhận trên <code>nil channel</code> sẽ block mãi. Đây là các bug concurrency rất phổ biến với người mới.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng channel khi bạn thật sự cần giao tiếp hoặc đồng bộ giữa goroutines. Nếu chỉ cần bảo vệ dữ liệu dùng chung, đôi khi <code>Mutex</code> đơn giản hơn.</div>
       </div>
     </div>
 
