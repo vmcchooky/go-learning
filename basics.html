@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Go 1.26.4 — Cơ bản</title>
+<link rel="stylesheet" href="style.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+</head>
+<body>
+<div class="container">
+<header style="cursor: pointer;" title="Về trang chủ">
+  <h1>Go 1.26.4 — Tổng hợp từ Cơ bản đến Nâng cao</h1>
+  <p>Tài liệu tham khảo toàn diện · Phiên bản 1.26.4 · Ra mắt 02/06/2026</p>
+  <span class="badge">go.dev/dl/</span>
+</header>
+<div class="content">
+<!-- BASICS -->
+<div id="basics" class="section active">
+  <div id="basics-cards" class="topic-grid">
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Biến, hằng số & zero value</div><div class="topic-desc">var, :=, const, iota, phạm vi biến và zero value</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">var</span><span class="tag">:=</span><span class="tag">const</span><span class="tag">iota</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">var age int       // 0
+var name string  // ""
+var ok bool       // false
+
+x := 10          // chỉ dùng trong function
+y, z := 1, 2
+
+const Pi = 3.14159
+const (
+    Red = iota
+    Green
+    Blue
+)</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Biến trong Go luôn có zero value nên bạn có thể khai báo trước, gán sau. <code>:=</code> là cách khai báo ngắn gọn nhất cho biến cục bộ.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Biến cục bộ khai báo mà không dùng sẽ làm chương trình không biên dịch. Ngoài function thì không dùng được <code>:=</code>.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng <code>:=</code> khi kiểu dữ liệu đã rõ từ biểu thức bên phải. Dùng <code>var</code> khi muốn nhấn mạnh kiểu hoặc cần zero value trước.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Điều kiện & switch</div><div class="topic-desc">if, if với init, switch cơ bản, fallthrough vừa đủ dùng</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">if</span><span class="tag">switch</span><span class="tag">fallthrough</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">if score &gt;= 8 {
+    fmt.Println("gioi")
+} else if score &gt;= 5 {
+    fmt.Println("dat")
+} else {
+    fmt.Println("rot")
+}
+
+if err := doSomething(); err != nil {
+    return err
+}
+
+switch day {
+case "Sat", "Sun":
+    fmt.Println("weekend")
+case "Mon":
+    fmt.Println("new week")
+default:
+    fmt.Println("normal day")
+}</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Go không có toán tử ba ngôi nên <code>if</code> và <code>switch</code> là hai công cụ rẽ nhánh chính. <code>switch</code> tự dừng sau mỗi <code>case</code>, không cần <code>break</code>.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Biến tạo ở phần init của <code>if</code> chỉ sống trong chính câu lệnh đó. <code>fallthrough</code> có tồn tại nhưng nên dùng rất ít.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng <code>if</code> cho vài điều kiện ngắn. Dùng <code>switch</code> khi có nhiều nhánh rõ ràng và muốn code dễ đọc hơn.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Vòng lặp for & range</div><div class="topic-desc">for kiểu C, while-style và range qua slice, map, string</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">for</span><span class="tag">range</span><span class="tag">break</span><span class="tag">continue</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">// C-style
+for i := 0; i &lt; 3; i++ {
+    fmt.Println(i)
+}
+
+// while-style
+sum := 1
+for sum &lt; 10 {
+    sum += sum
+}
+
+nums := []int{10, 20, 30}
+for i, v := range nums {
+    fmt.Println(i, v)
+}
+
+for _, r := range "Go" { // r là rune
+    fmt.Printf("%c\n", r)
+}</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Go chỉ có một từ khóa lặp là <code>for</code>. <code>range</code> giúp duyệt dữ liệu gọn và an toàn hơn so với tự quản lý chỉ số trong nhiều trường hợp.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Trong <code>for i, v := range nums</code>, <code>v</code> là bản copy của phần tử hiện tại. Muốn sửa phần tử thật thì phải ghi qua <code>nums[i]</code>.</div>
+        <div class="note"><strong>Đọc sau:</strong> <code>range</code> còn dùng được với <code>map</code>, <code>channel</code>, số nguyên, và iterator function ở các phần nâng cao hơn.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Array</div><div class="topic-desc">Kích thước cố định và mang ngữ nghĩa value type</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">array</span><span class="tag">fixed-size</span><span class="tag">value type</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">a := [3]int{1, 2, 3}
+b := a       // copy toàn bộ mảng
+b[0] = 99
+
+fmt.Println(a) // [1 2 3]
+fmt.Println(b) // [99 2 3]</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Array có độ dài là một phần của kiểu dữ liệu. Gán array cho biến khác là copy dữ liệu, không phải chia sẻ bộ nhớ như slice.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Người mới thường nhầm array với slice. <code>[3]int</code> và <code>[4]int</code> là hai kiểu hoàn toàn khác nhau.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng khi kích thước cố định và thật sự có ý nghĩa. Trong code Go hằng ngày, bạn sẽ gặp <code>slice</code> nhiều hơn.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Slice</div><div class="topic-desc">Danh sách động, len/cap, append và backing array</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">slice</span><span class="tag">append</span><span class="tag">len/cap</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">s := []int{10, 20, 30}
+s = append(s, 40)
+
+sub := s[1:3]
+sub[0] = 99
+
+fmt.Println(s)   // [10 99 30 40]
+fmt.Println(sub) // [99 30]
+
+var nilSlice []int
+emptySlice := []int{}
+fmt.Println(nilSlice == nil) // true
+fmt.Println(len(emptySlice)) // 0</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Slice là “cửa sổ nhìn vào một vùng dữ liệu”. Nó có <code>len</code>, <code>cap</code> và thường là cấu trúc danh sách bạn dùng hằng ngày trong Go.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Hai slice có thể chia sẻ cùng backing array, nên sửa slice con có thể làm đổi slice gốc. <code>nil slice</code> và <code>empty slice</code> đều có độ dài 0 nhưng không hoàn toàn giống nhau.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng cho tập dữ liệu có kích thước thay đổi. Đây là lựa chọn mặc định thay cho array trong phần lớn chương trình.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Map</div><div class="topic-desc">Key-value, tra cứu nhanh, delete và comma-ok idiom</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">map</span><span class="tag">delete</span><span class="tag">comma-ok</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">scores := map[string]int{
+    "Ann": 9,
+    "Bob": 8,
+}
+
+scores["Cat"] = 10
+delete(scores, "Bob")
+
+score, ok := scores["Ann"]
+fmt.Println(score, ok)
+
+var m map[string]int
+fmt.Println(m["missing"]) // 0
+// m["x"] = 1             // panic</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Map dùng để lưu dữ liệu theo cặp key-value và tra cứu rất nhanh. Khi đọc một key, bạn có thể nhận thêm biến <code>ok</code> để biết key đó có tồn tại hay không.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Đọc từ <code>nil map</code> thì an toàn, nhưng ghi vào <code>nil map</code> sẽ panic. Thứ tự duyệt map không cố định.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng khi cần tra cứu theo tên, id, mã, hay bất kỳ khóa nào thay vì theo vị trí số như slice.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Pointer & address-of</div><div class="topic-desc">Hiểu &amp;, *, nil pointer và khi cần truyền địa chỉ</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">*</span><span class="tag">&</span><span class="tag">pointer</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">x := 42
+p := &amp;x
+
+fmt.Println(*p) // 42
+*p = 100
+fmt.Println(x)  // 100
+
+type Node struct {
+    Val  int
+    Next *Node
+}
+
+n := &amp;Node{Val: 1}</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Pointer cho phép bạn làm việc với địa chỉ của một giá trị. Khi sửa qua pointer, giá trị gốc cũng thay đổi.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Dùng nil pointer sẽ gây panic khi dereference. Go không có pointer arithmetic như C/C++.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng khi muốn hàm sửa dữ liệu gốc, khi struct lớn và không muốn copy nhiều, hoặc khi kiểu dữ liệu tự nhiên đã chứa liên kết như linked list/tree.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">new() vs make()</div><div class="topic-desc">Hai cách khởi tạo rất dễ nhầm với người mới</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">new</span><span class="tag">make</span><span class="tag">init</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">p := new(int)           // *int, zero value = 0
+nums := make([]int, 0, 8)
+seen := make(map[string]bool)
+jobs := make(chan int, 2)
+
+fmt.Println(*p)    // 0
+fmt.Println(nums)  // []
+fmt.Println(seen)  // map[]</code></pre>
+        <div class="note"><strong>Ý chính:</strong> <code>new(T)</code> trả về <code>*T</code>. <code>make(T)</code> chỉ dùng cho <code>slice</code>, <code>map</code>, <code>chan</code> và trả về chính giá trị đã sẵn sàng dùng.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> <code>new(map[string]int)</code> không cho bạn một map sẵn sàng ghi dữ liệu. Muốn dùng được ngay, hãy dùng <code>make(map[string]int)</code>.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Hầu hết khi làm việc với <code>slice</code>, <code>map</code>, <code>chan</code> bạn sẽ dùng <code>make</code>. <code>new</code> ít gặp hơn trong code beginner.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Packages</div><div class="topic-desc">Tách code theo package, export/unexport và import cơ bản</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">package</span><span class="tag">import</span><span class="tag">export</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">package mathutil
+
+import (
+    f "fmt"
+    _ "image/png" // chạy side effects, thường là init()
+)
+
+func Add(a, b int) int { return a + b } // export
+func helper() {}                        // chỉ dùng trong package
+
+func Demo() {
+    f.Println(Add(1, 2))
+}</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Package là cách Go tổ chức code. Tên bắt đầu bằng chữ hoa thì có thể dùng từ package khác, chữ thường thì không.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Blank import <code>_</code> không phải để “bỏ qua lỗi”, mà để lấy side effects. Dot import tồn tại nhưng người mới nên tránh vì làm code khó đọc.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Tạo package mới khi một nhóm hàm/kiểu dữ liệu đủ liên quan và bạn muốn tách chúng khỏi <code>main</code>.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Modules & go.mod</div><div class="topic-desc">Đơn vị quản lý dependency của Go và cấu trúc dự án tối thiểu</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">module</span><span class="tag">go.mod</span><span class="tag">dependency</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">// go.mod
+module github.com/user/myapp
+
+go 1.26
+
+require golang.org/x/sync v0.20.0
+
+// thư mục tối thiểu
+// myapp/
+//   go.mod
+//   main.go
+//   internal/auth/</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Module là “project unit” của Go. File <code>go.mod</code> ghi tên module, version Go, và các dependency chính.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Người mới hay nhầm package với module. Một module có thể chứa nhiều package.</div>
+        <div class="note"><strong>Đọc sau:</strong> Thư mục <code>internal/</code> giúp giới hạn package nào được phép import code bên trong. Hữu ích khi dự án lớn hơn.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Error handling</div><div class="topic-desc">Kiểm tra lỗi theo kiểu Go: trả về error và xử lý sớm</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">error</span><span class="tag">if err != nil</span><span class="tag">%w</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">func loadConfig() error {
+    data, err := os.ReadFile("config.json")
+    if err != nil {
+        return fmt.Errorf("load config: %w", err)
+    }
+    _ = data
+    return nil
+}
+
+err := loadConfig()
+if err != nil {
+    fmt.Println(err)
+}
+
+if errors.Is(err, os.ErrNotExist) {
+    fmt.Println("file chưa tồn tại")
+}</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Trong Go, lỗi thường là một giá trị trả về chứ không phải exception. Cách viết quen thuộc là “gọi hàm, kiểm tra <code>err</code>, xử lý sớm rồi return”.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Bỏ qua lỗi bằng <code>_</code> quá sớm sẽ làm bug khó tìm. Khi thêm ngữ cảnh, dùng <code>%w</code> để còn kiểm tra lại bằng <code>errors.Is</code>.</div>
+        <div class="note"><strong>Đọc sau:</strong> <code>errors.As</code>, custom error type, và <code>errors.Join</code> hữu ích hơn khi hệ thống bắt đầu lớn lên.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">defer</div><div class="topic-desc">Dọn tài nguyên tự động khi function kết thúc</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">defer</span><span class="tag">cleanup</span><span class="tag">LIFO</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">func readFile(path string) error {
+    f, err := os.Open(path)
+    if err != nil {
+        return err
+    }
+    defer f.Close()
+
+    name := "first"
+    defer fmt.Println(name) // in "first"
+    name = "second"
+
+    return nil
+}</code></pre>
+        <div class="note"><strong>Ý chính:</strong> <code>defer</code> rất hợp cho các việc “mở ở đâu thì đóng ở đó” như file, mutex, hay tracing. Nó làm code cleanup đáng tin cậy hơn khi có nhiều đường <code>return</code>.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Đối số của lời gọi <code>defer</code> được tính ngay tại dòng đó, không phải lúc function kết thúc. Vì vậy ví dụ trên sẽ in <code>first</code>.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng ngay sau khi tài nguyên được mở thành công: <code>Open</code>, <code>Lock</code>, <code>Start</code>, hay các thao tác cần đảm bảo cleanup.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">panic & recover</div><div class="topic-desc">Dành cho lỗi không thể tiếp tục, không phải cách xử lý lỗi thông thường</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">panic</span><span class="tag">recover</span><span class="tag">error boundary</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">func safeRun(fn func()) {
+    defer func() {
+        if r := recover(); r != nil {
+            fmt.Println("panic:", r)
+        }
+    }()
+
+    fn()
+}
+
+safeRun(func() {
+    panic("boom")
+})</code></pre>
+        <div class="note"><strong>Ý chính:</strong> <code>panic</code> dành cho trạng thái chương trình không còn hợp lệ hoặc lỗi không thể tiếp tục. Trong luồng business bình thường, hãy trả về <code>error</code> thay vì panic.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> <code>recover()</code> chỉ có tác dụng khi được gọi trực tiếp bên trong một hàm <code>defer</code> đang chạy trong lúc panic lan ra ngoài.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Thường chỉ dùng ở ranh giới chương trình như worker loop, HTTP middleware, hoặc framework code để tránh một panic làm sập toàn bộ tiến trình.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+</div>
+<script src="script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+</body>
+</html>

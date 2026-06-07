@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Go 1.26.4 — Kiểu dữ liệu</title>
+<link rel="stylesheet" href="style.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+</head>
+<body>
+<div class="container">
+<header style="cursor: pointer;" title="Về trang chủ">
+  <h1>Go 1.26.4 — Tổng hợp từ Cơ bản đến Nâng cao</h1>
+  <p>Tài liệu tham khảo toàn diện · Phiên bản 1.26.4 · Ra mắt 02/06/2026</p>
+  <span class="badge">go.dev/dl/</span>
+</header>
+<div class="content">
+<!-- TYPES -->
+<div id="types" class="section active">
+  <div id="types-cards" class="topic-grid">
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Kiểu số & string</div><div class="topic-desc">int, float64, complex, rune, byte, string immutability</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">int8/16/32/64</span><span class="tag">float32/64</span><span class="tag">rune</span><span class="tag">byte</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">// Integer types
+var a int8   = 127    // -128 đến 127
+var b uint64 = 1&lt;&lt;63  // unsigned
+var c int           // 32 hoặc 64 bit, tùy kiến trúc
+var d uintptr       // chứa địa chỉ dạng số; chỉ dùng cùng unsafe khi thật cần
+
+// String — immutable, UTF-8
+s := "Hello, 世界"
+len(s)          // bytes, không phải runes!
+utf8.RuneCountInString(s) // số ký tự thực
+
+// rune = int32 (Unicode code point)
+r := 'A'         // rune literal
+rs := []rune(s) // convert để thao tác ký tự
+
+// String builder (hiệu quả hơn concatenation)
+var sb strings.Builder
+sb.WriteString("Hello")
+result := sb.String()</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Type alias & defined types</div><div class="topic-desc">type MyInt int, type alias = , type assertion</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">type</span><span class="tag">alias</span><span class="tag">conversion</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">// Defined type — type mới, không tương thích
+type Celsius float64
+type Fahrenheit float64
+
+var c Celsius = 100
+// var f Fahrenheit = c  // ERROR: không thể gán trực tiếp
+var f Fahrenheit = Fahrenheit(c * 9/5 + 32) // explicit convert
+
+// Type alias — hoàn toàn giống nhau
+type MyInt = int       // alias với =
+var x MyInt = 5
+var y int = x           // OK: cùng type
+
+// Type assertion
+var i interface{} = "hello"
+s, ok := i.(string)    // ok = true
+n, ok := i.(int)       // ok = false, n = 0</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Type switch</div><div class="topic-desc">switch v.(type) — xử lý nhiều loại interface</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">type switch</span><span class="tag">interface</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">func describe(i any) string {
+    switch v := i.(type) {
+    case int:
+        return fmt.Sprintf("int: %d", v)
+    case string:
+        return fmt.Sprintf("string: %q", v)
+    case []byte:
+        return fmt.Sprintf("bytes: %d", len(v))
+    case nil:
+        return "nil"
+    default:
+        return fmt.Sprintf("unknown: %T", v)
+    }
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Comparable & constraints</div><div class="topic-desc">comparable, ordered, any, union types, underlying type</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">comparable</span><span class="tag">any</span><span class="tag">constraints</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">// any = interface{}
+func Print(v any) { fmt.Println(v) }
+
+// comparable — có thể dùng == và !=
+// slice, map, func KHÔNG comparable
+func Contains[T comparable](slice []T, item T) bool {
+    for _, v := range slice {
+        if v == item { return true }
+    }
+    return false
+}
+
+// Union constraint
+type Number interface {
+    int | int32 | int64 | float32 | float64
+}
+
+// Underlying type với ~
+type MyInt int
+type Integer interface { ~int }
+// MyInt thỏa mãn Integer vì underlying = int</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Channel types</div><div class="topic-desc">chan, chan&lt;-, &lt;-chan, buffered/unbuffered</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">chan</span><span class="tag">buffered</span><span class="tag">directional</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">// Unbuffered: sync communication
+ch := make(chan int)
+
+// Buffered: async up to capacity
+bch := make(chan string, 10)
+
+// Directional channels
+var send chan&lt;- int = ch  // send-only
+var recv &lt;-chan int = ch  // receive-only
+
+// Range over channel
+go func() {
+    for v := range ch { // block cho đến khi close
+        fmt.Println(v)
+    }
+}()
+
+// Check if channel has value
+select {
+case v, ok := &lt;-ch:
+    if !ok { /* channel closed */ }
+default: // non-blocking
+}</code></pre>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+</div>
+<script src="script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+</body>
+</html>

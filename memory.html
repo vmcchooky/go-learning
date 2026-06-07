@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Go 1.26.4 — Memory & GC</title>
+<link rel="stylesheet" href="style.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+</head>
+<body>
+<div class="container">
+<header style="cursor: pointer;" title="Về trang chủ">
+  <h1>Go 1.26.4 — Tổng hợp từ Cơ bản đến Nâng cao</h1>
+  <p>Tài liệu tham khảo toàn diện · Phiên bản 1.26.4 · Ra mắt 02/06/2026</p>
+  <span class="badge">go.dev/dl/</span>
+</header>
+<div class="content">
+<!-- MEMORY & GC -->
+<div id="memory" class="section active">
+  <div id="memory-cards" class="topic-grid">
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Escape analysis & stack/heap</div><div class="topic-desc">Khi nào object dễ lên heap, gcflags=-m, tối ưu</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">escape analysis</span><span class="tag">heap</span><span class="tag">stack</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">// Xem escape analysis
+// go build -gcflags="-m" ./...
+
+// Object thường lên heap khi compiler thấy value "escape":
+// 1. Trả về pointer ra ngoài function
+func newFoo() *Foo {
+    f := Foo{}   // thường escape vì địa chỉ thoát khỏi function
+    return &amp;f
+}
+
+// 2. Boxing vào interface có thể làm value escape
+var i interface{} = Foo{}  // tùy ngữ cảnh, compiler quyết định
+
+// 3. Backing array mà compiler không chứng minh được nằm trên stack
+s := make([]byte, n)       // n không constant thường khiến backing array lên heap
+
+// Tối ưu: dùng stack nếu có thể
+func sum(nums []int) int {
+    // Trả về value, không phải pointer
+    total := 0           // thường ở stack nếu không escape
+    for _, n := range nums { total += n }
+    return total
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">sync.Pool</div><div class="topic-desc">Object pooling, GC interaction, buffer reuse</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">sync.Pool</span><span class="tag">pooling</span><span class="tag">GC</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">var bufPool = sync.Pool{
+    New: func() any {
+        return &amp;bytes.Buffer{}
+    },
+}
+
+func encode(data any) ([]byte, error) {
+    buf := bufPool.Get().(*bytes.Buffer)
+    defer func() {
+        buf.Reset()
+        bufPool.Put(buf)
+    }()
+
+    if err := json.NewEncoder(buf).Encode(data); err != nil {
+        return nil, err
+    }
+    result := make([]byte, buf.Len())
+    copy(result, buf.Bytes())
+    return result, nil
+}
+
+// Lưu ý: Pool có thể bị GC bỏ bớt giữa các cycle
+// Phù hợp cho: buffers, temporary objects
+// Không dùng như cache bền vững, connection, state quan trọng</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Profiling & pprof</div><div class="topic-desc">CPU, memory, goroutine profile, flamegraph</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">pprof</span><span class="tag">profiling</span><span class="tag">flamegraph</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">import (
+    "net/http"
+    _ "net/http/pprof"  // đăng ký endpoints
+    "runtime"
+    "runtime/pprof"
+)
+
+// HTTP pprof server
+go http.ListenAndServe("localhost:6060", nil)
+
+// CLI profiling
+// go tool pprof http://localhost:6060/debug/pprof/heap
+// go tool pprof http://localhost:6060/debug/pprof/goroutine
+// go tool pprof -http=:8080 cpu.prof
+
+// CPU profile trong code
+f, _ := os.Create("cpu.prof")
+pprof.StartCPUProfile(f)
+defer pprof.StopCPUProfile()
+
+// Memory profile
+runtime.GC()
+f2, _ := os.Create("mem.prof")
+pprof.WriteHeapProfile(f2)</code></pre>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</div>
+</div>
+<script src="script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+</body>
+</html>

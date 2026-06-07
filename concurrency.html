@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Go 1.26.4 — Concurrency</title>
+<link rel="stylesheet" href="style.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+</head>
+<body>
+<div class="container">
+<header style="cursor: pointer;" title="Về trang chủ">
+  <h1>Go 1.26.4 — Tổng hợp từ Cơ bản đến Nâng cao</h1>
+  <p>Tài liệu tham khảo toàn diện · Phiên bản 1.26.4 · Ra mắt 02/06/2026</p>
+  <span class="badge">go.dev/dl/</span>
+</header>
+<div class="content">
+<!-- CONCURRENCY -->
+<div id="concurrency" class="section active">
+  <div id="concurrency-cards" class="topic-grid">
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Goroutines & WaitGroup</div><div class="topic-desc">go keyword, sync.WaitGroup, goroutine leak prevention</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">goroutine</span><span class="tag">WaitGroup</span><span class="tag">concurrent</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">var wg sync.WaitGroup
+
+for i := range 5 {
+    id := i
+    wg.Go(func() {
+        fmt.Printf("worker %d done\n", id)
+    })
+}
+wg.Wait()
+
+// Goroutine leak — BAD
+func leak() {
+    ch := make(chan int)
+    go func() { ch &lt;- 1 }() // block mãi nếu không đọc
+}
+
+// Goroutine leak — GOOD: dùng context
+func good(ctx context.Context) {
+    ch := make(chan int, 1)
+    go func() {
+        select {
+        case ch &lt;- 1:
+        case &lt;-ctx.Done():
+        }
+    }()
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Channel patterns</div><div class="topic-desc">Pipeline, fan-out/fan-in, done channel, select</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">pipeline</span><span class="tag">fan-out</span><span class="tag">select</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">// Pipeline pattern
+func gen(nums ...int) &lt;-chan int {
+    out := make(chan int)
+    go func() {
+        defer close(out)
+        for _, n := range nums { out &lt;- n }
+    }()
+    return out
+}
+
+func sq(in &lt;-chan int) &lt;-chan int {
+    out := make(chan int)
+    go func() {
+        defer close(out)
+        for n := range in { out &lt;- n * n }
+    }()
+    return out
+}
+
+// Select với timeout
+select {
+case v := &lt;-ch1:
+    fmt.Println("from ch1:", v)
+case ch2 &lt;- 42:
+    fmt.Println("sent to ch2")
+case &lt;-time.After(1 * time.Second):
+    fmt.Println("timeout")
+case &lt;-ctx.Done():
+    return
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Mutex, RWMutex & sync primitives</div><div class="topic-desc">sync.Mutex, sync.RWMutex, sync.Once, sync.Map</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">Mutex</span><span class="tag">RWMutex</span><span class="tag">sync.Once</span><span class="tag">sync.Map</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">type SafeCounter struct {
+    mu sync.RWMutex
+    v  map[string]int
+}
+
+func (c *SafeCounter) Inc(key string) {
+    c.mu.Lock()
+    defer c.mu.Unlock()
+    c.v[key]++
+}
+
+func (c *SafeCounter) Value(key string) int {
+    c.mu.RLock()   // nhiều reader đồng thời
+    defer c.mu.RUnlock()
+    return c.v[key]
+}
+
+// sync.Once — khởi tạo một lần (singleton)
+var (
+    once     sync.Once
+    instance *DB
+)
+func GetDB() *DB {
+    once.Do(func() { instance = newDB() })
+    return instance
+}
+
+// sync.Map — concurrent safe map
+var sm sync.Map
+sm.Store("key", 42)
+v, ok := sm.Load("key")</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Context</div><div class="topic-desc">context.WithCancel, WithTimeout, WithValue, cancellation</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">context</span><span class="tag">cancellation</span><span class="tag">deadline</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">// WithCancel
+baseCtx := context.Background()
+ctx, cancel := context.WithCancel(baseCtx)
+defer cancel()
+
+// WithTimeout
+timeoutCtx, cancelTimeout := context.WithTimeout(ctx, 5*time.Second)
+defer cancelTimeout()
+
+// WithValue — key nên là unexported custom type
+type ctxKey struct{}
+timeoutCtx = context.WithValue(timeoutCtx, ctxKey{}, "user-123")
+val := timeoutCtx.Value(ctxKey{})
+
+// Sử dụng context trong function
+func fetchData(ctx context.Context) (Data, error) {
+    req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
+    resp, err := http.DefaultClient.Do(req)
+    if errors.Is(err, context.DeadlineExceeded) {
+        return Data{}, fmt.Errorf("timeout: %w", err)
+    }
+    return parseData(resp)
+}</code></pre>
+        <div class="note"><strong>Best practice:</strong> Context phải là tham số đầu tiên, tên <code>ctx</code>. Không lưu context trong struct. Luôn gọi <code>cancel()</code> để tránh context leak.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">atomic & sync/atomic</div><div class="topic-desc">atomic operations, CAS, lock-free programming</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">atomic</span><span class="tag">CAS</span><span class="tag">lock-free</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">import "sync/atomic"
+
+var counter atomic.Int64
+counter.Add(1)
+n := counter.Load()
+counter.Store(100)
+
+// Compare-And-Swap (CAS)
+var flag atomic.Bool
+if flag.CompareAndSwap(false, true) {
+    // chỉ một goroutine thực hiện được
+    doWork()
+}
+
+// atomic.Value cho arbitrary types
+var config atomic.Value
+config.Store(Config{MaxConn: 100})
+c := config.Load().(Config)</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">errgroup & singleflight</div><div class="topic-desc">golang.org/x/sync, parallel error handling, deduplication</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">errgroup</span><span class="tag">singleflight</span><span class="tag">x/sync</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">import "golang.org/x/sync/errgroup"
+
+// errgroup: parallel tasks với error handling
+eg, ctx := errgroup.WithContext(context.Background())
+
+eg.Go(func() error { return task1(ctx) })
+eg.Go(func() error { return task2(ctx) })
+
+if err := eg.Wait(); err != nil {
+    // context tự cancel khi có lỗi
+}
+
+// singleflight: deduplicate concurrent calls
+import "golang.org/x/sync/singleflight"
+
+var sf singleflight.Group
+func fetchUser(id string) (*User, error) {
+    v, err, _ := sf.Do(id, func() (any, error) {
+        return db.GetUser(id) // chỉ 1 request dù 100 goroutine gọi
+    })
+    return v.(*User), err
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Worker Pool Pattern</div><div class="topic-desc">Pattern phổ biến: jobs channel + fixed workers + results channel</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">worker pool</span><span class="tag">pattern</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">func workerPool(jobs &lt;-chan int, results chan&lt;- int, wg *sync.WaitGroup) {
+    defer wg.Done()
+    for j := range jobs {
+        results &lt;- j * j
+    }
+}
+
+func main() {
+    jobs := make(chan int, 100)
+    results := make(chan int, 100)
+    var wg sync.WaitGroup
+
+    for w := 0; w &lt; 3; w++ {
+        wg.Add(1)
+        go workerPool(jobs, results, &amp;wg)
+    }
+
+    for j := 1; j &lt;= 9; j++ { jobs &lt;- j }
+    close(jobs)
+
+    go func() { wg.Wait(); close(results) }()
+
+    for r := range results { fmt.Println(r) }
+}</code></pre>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+</div>
+<script src="script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+</body>
+</html>

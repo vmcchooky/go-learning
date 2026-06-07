@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Go 1.26.4 — Từ khóa & Định danh cốt lõi</title>
+<link rel="stylesheet" href="style.css">
+<style>
+/* Additional specific styles for keyword cards */
+.kw-title { font-family: var(--font-mono); color: var(--accent); font-size: 16px; font-weight: 600;}
+.kw-philosophy { margin-top: 14px; padding: 12px 14px; background: rgba(0, 173, 216, 0.05); border-left: 3px solid var(--accent); border-radius: 4px; font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+.kw-philosophy strong { color: var(--text-primary); }
+.cat-title { font-size: 18px; margin: 2rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); color: var(--text-primary); font-weight: 600; }
+</style>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+</head>
+<body>
+<div class="container">
+<header style="cursor: pointer;" title="Về trang chủ">
+  <h1>Go 1.26.4 — Tổng hợp từ Cơ bản đến Nâng cao</h1>
+  <p>Tài liệu tham khảo toàn diện · Phiên bản 1.26.4 · Ra mắt 02/06/2026</p>
+  <span class="badge">go.dev/dl/</span>
+</header>
+<div class="content">
+
+<div id="keywords" class="section active">
+  <div class="section-title" style="margin-top: 0; justify-content: space-between;"><span>Từ khóa & Định danh (Keywords & Built-ins)</span><span style="font-size: 14px; font-weight: normal; color: var(--text-secondary); cursor: pointer;">← Quay lại Dashboard</span></div>
+  
+  <div class="note" style="margin-bottom: 2rem; padding: 16px;">Ngôn ngữ Go được thiết kế với sự tối giản cực đoan, chỉ bao gồm <strong>25 từ khóa (keywords)</strong>. Tư duy thiết kế này hướng tới nguyên tắc tính trực giao (Orthogonality), giảm thiểu độ phức tạp về mặt cú pháp để tối ưu hóa hiệu năng biên dịch và khả năng đọc hiểu mã nguồn ở quy mô lớn.</div>
+
+  <!-- 1. QUẢN LÝ PACKAGE -->
+  <div class="cat-title">1. Quản lý Package (Package Management)</div>
+  <div class="topic-grid">
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">package</div><div class="topic-desc">Định nghĩa không gian tên (namespace) cho file nguồn hiện tại.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">package main</code></pre>
+        <div class="kw-philosophy">Cơ chế package trong Go cung cấp sự cách ly không gian tên (namespace isolation) ở cấp độ thư mục. Khác với chỉ thị `#include` của C/C++ vốn sao chép trực tiếp mã nguồn, package giúp trình biên dịch phân giải phụ thuộc một cách tuần tự và ngăn chặn triệt để các xung đột định danh (identifier collisions).</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">import</div><div class="topic-desc">Khai báo các package bên ngoài mà file hiện tại cần sử dụng.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">import (
+    "fmt"
+    "net/http"
+)</code></pre>
+        <div class="kw-philosophy">Go áp dụng chính sách biên dịch tĩnh cực kỳ nghiêm ngặt: trình biên dịch sẽ báo lỗi nếu một package được import mà không được sử dụng. Cơ chế này được gọi là Zero-cost dependency management, đảm bảo kích thước file nhị phân (binary footprint) luôn ở mức tối thiểu và thời gian liên kết (linking time) đạt tốc độ tối đa.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. KHAI BÁO THỰC THỂ -->
+  <div class="cat-title">2. Khai báo Thực thể (Declarations)</div>
+  <div class="topic-grid">
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">var</div><div class="topic-desc">Khai báo một hoặc nhiều biến, có thể gán giá trị khởi tạo.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">var name string = "Go"</code></pre>
+        <div class="kw-philosophy">Khai báo biến trong Go gắn liền với cơ chế Zero Value Semantics. Bất kể biến được khởi tạo rõ ràng hay không, hệ thống sẽ tự động cấp phát và gán giá trị mặc định tương ứng với kiểu dữ liệu. Điều này ngăn chặn hoàn toàn các lỗi Undefined Behavior do truy cập vào vùng nhớ rác thường gặp ở ngôn ngữ quản lý bộ nhớ thủ công.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">const</div><div class="topic-desc">Khai báo hằng số (không thể thay đổi sau khi gán).</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">const Pi = 3.14159</code></pre>
+        <div class="kw-philosophy">Hệ thống hằng số vô kiểu (untyped constants) của Go hoạt động ở cấp độ Cây cú pháp trừu tượng (AST) trong giai đoạn biên dịch. Khác với biến, hằng số cho phép tính toán với độ chính xác tùy ý mà không bị giới hạn bởi tràn bộ nhớ (overflow) cho đến khi chúng thực sự được ép vào một kiểu dữ liệu cụ thể trong quá trình kiểm tra kiểu/biên dịch.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">type</div><div class="topic-desc">Định nghĩa một kiểu dữ liệu mới hoặc tạo bí danh (alias).</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">type User struct { ... }
+type ID int64</code></pre>
+        <div class="kw-philosophy">Từ khóa <code>type</code> có hai vai trò khác nhau: tạo <em>defined type</em> mới, hoặc tạo alias bằng dấu <code>=</code>. Defined type là nền tảng của method set và interface implementation; chỉ defined type trong cùng package mới có thể là receiver base type của method.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">func</div><div class="topic-desc">Khai báo hàm (function) hoặc phương thức (method).</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">func DoWork() error { ... }</code></pre>
+        <div class="kw-philosophy">Hàm trong Go là một First-Class Citizen. Điểm khác biệt cốt lõi là khả năng trả về đa giá trị (multiple return values), cung cấp nền tảng vững chắc cho triết lý "Error as Values" của Go. Thay vì sử dụng cơ chế ném ngoại lệ (Exception) gây mất kiểm soát và hiệu năng khi unwinding stack, Go khuyến khích xử lý lỗi tường minh ngay tại luồng gọi.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. KIỂU DỮ LIỆU PHỨC HỢP -->
+  <div class="cat-title">3. Kiểu dữ liệu Phức hợp (Composite Types)</div>
+  <div class="topic-grid">
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">struct</div><div class="topic-desc">Cấu trúc dữ liệu gom nhóm các trường (fields) có kiểu khác nhau.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">type Point struct { x, y int }</code></pre>
+        <div class="kw-philosophy">Go loại bỏ hoàn toàn Khái niệm Kế thừa (Inheritance). Thay vào đó, struct thúc đẩy mô hình Composition over Inheritance (Lắp ghép thay vì Kế thừa) thông qua struct embedding. Dữ liệu trong struct được sắp xếp liên tục trên bộ nhớ RAM, giúp tối ưu hóa khả năng tận dụng CPU Cache (Cache locality) trong các ứng dụng hiệu năng cao.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">interface</div><div class="topic-desc">Định nghĩa tập hợp các method signatures (hành vi).</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">type Reader interface {
+    Read(p []byte) (n int, err error)
+}</code></pre>
+        <div class="kw-philosophy">Đại diện cho mô hình Structural Typing (hay Duck Typing). Việc không yêu cầu từ khóa implements tường minh giúp tạo ra sự liên kết lỏng (loose coupling) giữa các thành phần phần mềm. Hệ thống có thể phối hợp các module và thư viện một cách tự nhiên thông qua hợp đồng hành vi thay vì chia sẻ chung một hệ thống phân cấp kiểu.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">map</div><div class="topic-desc">Kiểu cấu trúc dữ liệu lưu trữ theo cặp key-value (Hash table).</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">m := make(map[string]int)</code></pre>
+        <div class="kw-philosophy">Được tích hợp sâu như một primitive type, map của Go là một bản hiện thực hóa tối ưu của cấu trúc dữ liệu Hash Table. Trình biên dịch ngầm quản lý các hàm băm (hash functions), giải quyết xung đột (collision resolution) và thao tác tự động cấp phát lại vùng nhớ (rehashing), đảm bảo chi phí truy vấn trung bình luôn ở mức O(1).</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">chan</div><div class="topic-desc">Kênh đồng bộ và truyền dữ liệu an toàn giữa các goroutines.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">ch := make(chan int, 10)</code></pre>
+        <div class="kw-philosophy">Là cốt lõi của việc hiện thực hóa mô hình Communicating Sequential Processes (CSP). Channel giúp giảm nhu cầu chia sẻ bộ nhớ trực tiếp và làm rõ điểm đồng bộ giữa các goroutine. Tuy vậy, dùng sai vẫn có thể gây deadlock hoặc goroutine leak, nên việc thiết kế luồng dữ liệu vẫn rất quan trọng.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. ĐIỀU KHIỂN LUỒNG -->
+  <div class="cat-title">4. Điều khiển Luồng (Flow Control)</div>
+  <div class="topic-grid">
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">if</div><div class="topic-desc">Câu lệnh rẽ nhánh điều kiện cơ bản.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">if err := init(); err != nil { ... }</code></pre>
+        <div class="kw-philosophy">Cú pháp rẽ nhánh của Go hỗ trợ khởi tạo biến cực kỳ tối ưu thông qua khái niệm Phạm vi từ vựng (Lexical Scoping). Biến cục bộ được khai báo ngay trên dòng lệnh if sẽ tự động bị hủy (out of scope) khi khối lệnh kết thúc. Sự cô lập này giúp giảm tải áp lực cho hệ thống dọn rác (Garbage Collector).</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">else</div><div class="topic-desc">Khối lệnh thực thi khi điều kiện `if` bị sai.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">if a &gt; b { ... } else { ... }</code></pre>
+        <div class="kw-philosophy">Việc ép buộc định dạng code (Format enforcement) yêu cầu else phải nằm cùng dòng với dấu ngoặc nhọn của block if trước đó không phải là sự ngẫu nhiên. Nó ngăn chặn lỗi phân giải nhầm câu lệnh của trình biên dịch do tính năng tự động chèn dấu chấm phẩy (Automatic Semicolon Insertion) của ngôn ngữ.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">for</div><div class="topic-desc">Từ khóa vòng lặp duy nhất trong Go.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">for i := 0; i &lt; 10; i++ { ... }</code></pre>
+        <div class="kw-philosophy">Thay vì phân tán thành while, do-while hay foreach, Go gom mọi cấu trúc lặp vào một từ khóa duy nhất. Thiết kế tổi giản này không những làm giảm độ phức tạp học thuật mà còn cho phép trình biên dịch áp dụng các kỹ thuật phân tích và tối ưu hóa vòng lặp (như Loop Unrolling) một cách đồng nhất và hiệu quả.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">range</div><div class="topic-desc">Cú pháp duyệt qua array, slice, map, string, channel, integer, iterator function.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">for i, v := range list { ... }</code></pre>
+        <div class="kw-philosophy">Một công cụ iteration mạnh mẽ và an toàn. Với string, <code>range</code> tự động giải mã UTF-8 thành rune. Từ các bản Go mới, <code>range</code> còn hỗ trợ integer và iterator functions, giúp viết vòng lặp và custom iterators ngắn gọn hơn mà vẫn giữ cú pháp quen thuộc.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">switch</div><div class="topic-desc">Câu lệnh rẽ nhánh đa nhánh ngắn gọn.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">switch os := runtime.GOOS; os {
+case "darwin": ...
+}</code></pre>
+        <div class="kw-philosophy">Khác với C/C++, <code>switch</code> trong Go tự động dừng sau mỗi <code>case</code> nếu không có <code>fallthrough</code>. Điều này giảm mạnh lỗi fallthrough vô ý, trong khi vẫn giữ cú pháp gọn cho các nhánh điều kiện hoặc type switch.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">case</div><div class="topic-desc">Một nhánh điều kiện cụ thể bên trong `switch` hoặc `select`.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">case x &lt; 0:
+    fmt.Println("Negative")</code></pre>
+        <div class="kw-philosophy">Case trong Go không bị giới hạn ở việc so sánh giá trị hằng số như ngôn ngữ truyền thống. Khối điều kiện có thể chấp nhận danh sách biểu thức linh hoạt, biểu thức boolean phức hợp, hay thậm chí hoạt động như một cơ chế kiểm tra kiểu dữ liệu tĩnh (Type Switch), tạo ra sự uyển chuyển tối đa trong luồng điều khiển.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">default</div><div class="topic-desc">Nhánh mặc định khi không có case nào khớp.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">default:
+    DoFallback()</code></pre>
+        <div class="kw-philosophy">Bảo đảm tính toàn vẹn của nhánh điều khiển luồng. Khối default thiết lập một cơ chế dự phòng (Fallback Mechanism) cần thiết, giữ cho chương trình có khả năng chịu lỗi (Fault tolerance) trước các giá trị biên không dự đoán trước được mà không gây sụp đổ logic hệ thống.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">fallthrough</div><div class="topic-desc">Ép `switch` chạy xuyên qua case bên dưới.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">case 1:
+    fallthrough
+case 2: ...</code></pre>
+        <div class="kw-philosophy">Mặc dù đi ngược lại thiết kế Implicit Break an toàn của ngôn ngữ, fallthrough vẫn được bảo lưu có chủ ý. Lệnh này đòi hỏi người viết code phải đánh vần sự nguy hiểm một cách có ý thức (Explicit intention) khi họ thực sự cần đến mô hình xếp tầng liên tiếp (Cascading logic flow) để xử lý dữ liệu.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">break</div><div class="topic-desc">Thoát ngay lập tức khỏi `for`, `switch`, hoặc `select`.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">for {
+    if done { break }
+}</code></pre>
+        <div class="kw-philosophy">Hỗ trợ ngắt luồng ngay lập tức. Tính năng nổi bật nhất của break trong Go là kết hợp với Nhãn (Labeled Break). Điều này cung cấp giải pháp thoát chuỗi vòng lặp lồng sâu đa tầng với độ trễ (latency) cực thấp, mà không cần khởi tạo các biến cờ trạng thái (flag variables) rườm rà.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">continue</div><div class="topic-desc">Bỏ qua phần lệnh còn lại và nhảy sang vòng lặp kế tiếp.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">for _, v := range list {
+    if v == nil { continue }
+}</code></pre>
+        <div class="kw-philosophy">Khuyến khích nguyên tắc Early Return (Thoát sớm) trong cấu trúc khối lệnh. Bằng cách sử dụng continue để xử lý các điều kiện không thỏa mãn ngay từ đầu, mã nguồn giữ được cấu trúc phẳng sát mép trái (tránh Deep Nesting), từ đó làm tăng khả năng đọc hiểu luồng thực thi tổng thể.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">goto</div><div class="topic-desc">Nhảy vô điều kiện tới một nhãn (label) trong cùng hàm.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">if err != nil { goto ErrorHandler }</code></pre>
+        <div class="kw-philosophy">Thường bị coi là cấu trúc phản khoa học (Anti-pattern), nhưng goto có tính ứng dụng cao cấp. Trong các thư viện đòi hỏi vắt kiệt hiệu năng (ví dụ như mã nguồn chuẩn của Go), goto đóng vai trò tối ưu hóa các Vòng lặp nóng (Hot loops) hoặc tái sử dụng triệt để đoạn mã dọn dẹp bộ nhớ ở cuối thân hàm.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. ĐỒNG THỜI -->
+  <div class="cat-title">5. Đồng thời (Concurrency)</div>
+  <div class="topic-grid">
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">go</div><div class="topic-desc">Khởi chạy một hàm thành tiến trình bất đồng bộ (Goroutine).</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">go DoBackgroundJob()</code></pre>
+        <div class="kw-philosophy">Biến một hàm thành luồng bất đồng bộ dựa trên kiến trúc M:N Scheduler riêng của Go Runtime. Goroutine không phải là OS Threads (Luồng hệ điều hành), chúng được phân phối độc lập, có ngăn xếp tự động co giãn bắt đầu với chi phí siêu nhỏ (khoảng 2KB stack), cho phép vận hành đồng thời hàng triệu tiến trình.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">select</div><div class="topic-desc">Chờ kết quả trên nhiều channel cùng lúc (multiplexing).</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">select {
+case msg := &lt;-ch:
+case &lt;-time.After(sec):
+}</code></pre>
+        <div class="kw-philosophy">Hiện thực hóa kỹ thuật I/O Multiplexing đặc thù cho ngôn ngữ. select thiết lập một cơ chế chặn luồng thông minh, liên tục lắng nghe hàng loạt channel độc lập. Nó là cấu trúc xương sống để kiểm soát Timeout, Cancellation (qua context) và đảm bảo an toàn luồng trong các hệ thống kiến trúc vi dịch vụ (Microservices).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. THOÁT & DỌN DẸP -->
+  <div class="cat-title">6. Thoát & Dọn dẹp (Return & Cleanup)</div>
+  <div class="topic-grid">
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">return</div><div class="topic-desc">Kết thúc hàm và trả về kết quả (hỗ trợ trả về nhiều biến).</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">return val, err</code></pre>
+        <div class="kw-philosophy">Triết lý thiết kế coi lỗi như một kiểu dữ liệu thông thường (Error as Values). Việc loại bỏ hoàn toàn cơ chế Exception ẩn giấu ép buộc lập trình viên phải tường minh đánh giá và xử lý rủi ro ngay lập tức, từ đó kiến tạo nên các phần mềm có độ tin cậy và khả năng dự đoán (Predictability) cực kỳ cao.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">defer</div><div class="topic-desc">Đẩy lệnh vào stack để chạy vào khoảnh khắc hàm hiện tại kết thúc.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">f, _ := os.Open("file")
+defer f.Close()</code></pre>
+        <div class="kw-philosophy">Sử dụng cấu trúc dữ liệu ngăn xếp LIFO (Last-In-First-Out). defer trì hoãn việc thi hành hàm dọn dẹp cho đến trước khoảnh khắc return trả quyền kiểm soát. Nó là tấm khiên vững chắc đảm bảo các tài nguyên hệ thống (File Descriptor, Mutex Lock, Network Connection) luôn được giải phóng an toàn ngay cả khi tiến trình rơi vào trạng thái Panic.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. CÁC ĐỊNH DANH CÓ SẴN -->
+  <div class="cat-title">7. Các định danh có sẵn (Predeclared Identifiers)</div>
+  <div class="note" style="margin-bottom: 2rem; padding: 16px;">Khác với 25 từ khóa bị khóa cứng, Go cung cấp khoảng hơn 40 định danh có sẵn (kiểu dữ liệu, hằng số, hàm tích hợp). Dưới đây là hơn 20 định danh nền tảng quan trọng nhất cấu thành nên sự linh hoạt của ngôn ngữ. Mặc dù bạn <strong>có thể</strong> gán lại chúng (ví dụ: <code>var len = 10</code>), nhưng việc che khuất (shadowing) này được coi là Anti-pattern nguy hiểm.</div>
+  
+  <div class="topic-grid">
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">nil</div><div class="topic-desc">Giá trị Zero của con trỏ, interface, map, slice, channel và func.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">var err error = nil</code></pre>
+        <div class="kw-philosophy"><code>nil</code> là một predeclared identifier không có type riêng; nó chỉ hợp lệ khi ngữ cảnh yêu cầu pointer, func, slice, map, channel, hoặc interface. Bẫy phổ biến không nằm ở bản thân <code>nil</code>, mà ở chỗ một interface có thể chứa nil pointer nhưng bản thân interface đó vẫn khác nil.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">iota</div><div class="topic-desc">Trình tạo hằng số nguyên tự động tăng trong khối const.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">const (
+    A = iota  // 0
+    B         // 1
+)</code></pre>
+        <div class="kw-philosophy">Hoạt động như một biến đếm vòng lặp nội tại của trình biên dịch trong giai đoạn phân tích cú pháp tĩnh. Thường được sử dụng kết hợp với các phép toán dịch bit (bitwise shift) để xây dựng hệ thống cờ trạng thái (Flags/Bitmasks) hoặc mô phỏng kiểu liệt kê (Enum) một cách thanh lịch và tối ưu bộ nhớ.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">error</div><div class="topic-desc">Interface tích hợp sẵn để đại diện cho trạng thái lỗi.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">type error interface {
+    Error() string
+}</code></pre>
+        <div class="kw-philosophy">Đóng vai trò là Interface trung tâm của hệ sinh thái. Việc định chuẩn hóa cấu trúc lỗi thành một Interface đơn giản có duy nhất phương thức Error() giúp toàn bộ các thư viện lớn nhỏ trong Go giao tiếp rủi ro đồng nhất, đồng thời tạo cơ hội đóng gói lỗi (Error wrapping) để lưu vết ngữ cảnh dễ dàng.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">any</div><div class="topic-desc">Bí danh (alias) đại diện cho một interface trống `interface{}`.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">func PrintAll(v any) { ... }</code></pre>
+        <div class="kw-philosophy">Đại diện cho tính tương thích phổ quát. Vì mọi kiểu dữ liệu trong Go đều tự động thỏa mãn một Interface không chứa bất kỳ phương thức nào, any trở thành kiểu dữ liệu tĩnh (Static type) nhưng có khả năng chứa giá trị động (Dynamic value). Rất phổ biến trong các kiến trúc Reflection và JSON Unmarshaling.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">make</div><div class="topic-desc">Khởi tạo bộ nhớ và cấu trúc ẩn cho Slice, Map, và Channel.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">s := make([]int, 0, 10)</code></pre>
+        <div class="kw-philosophy"><code>make</code> dùng để khởi tạo slice, map, và channel rồi trả về chính value đó, không phải con trỏ. Việc object cuối cùng nằm trên stack hay heap do compiler quyết định; điểm quan trọng ở đây là <code>make</code> chuẩn bị cấu trúc runtime cần thiết để giá trị có thể dùng ngay.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">new</div><div class="topic-desc">Tạo biến mới zero value và trả về con trỏ tới nó.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">ptr := new(User) // *User, zero value</code></pre>
+        <div class="kw-philosophy"><code>new</code> tạo một biến mới đã được zero-initialize và trả về con trỏ tới biến đó. Cũng như <code>make</code>, việc nằm trên stack hay heap không phải điều cú pháp này tự cam kết; compiler sẽ quyết định dựa trên escape analysis.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">append</div><div class="topic-desc">Thêm phần tử vào Slice và tự động co giãn bộ nhớ.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">s = append(s, 1, 2, 3)</code></pre>
+        <div class="kw-philosophy">Hàm cốt lõi quản lý độ dãn nở mảng động. Khi dung lượng sức chứa (Capacity) của mảng gốc chạm ngưỡng, append tự động thi hành tác vụ cấp phát lại vùng nhớ mới (Reallocation) thường với kích thước x1.5 hoặc x2, sau đó di dời dữ liệu sang khối nhớ mới để duy trì chi phí thực thi O(1) khấu hao (Amortized time).</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">len</div><div class="topic-desc">Truy xuất độ dài thực tế của cấu trúc dữ liệu.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">l := len(s)</code></pre>
+        <div class="kw-philosophy">Hàm trả về kết quả ngay lập tức với chi phí tính toán O(1). Sự tối ưu này có được do thông tin về kích thước luôn được theo dõi chặt chẽ tại các siêu dữ liệu phần đầu (Header metadata) của Slice/Map/Channel/String, thay vì phải chạy vòng lặp đếm phần tử tốn kém.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">cap</div><div class="topic-desc">Truy xuất sức chứa (capacity) tối đa đã được cấp phát.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">c := cap(s)</code></pre>
+        <div class="kw-philosophy">Phân biệt rõ ràng với <code>len</code>, <code>cap</code> cho phép lập trình viên nhìn thấu vào lớp bộ nhớ ẩn bên dưới (underlying array) của Slice hoặc buffer của Channel. Đây là chìa khóa để viết mã phân bổ bộ nhớ tối ưu (pre-allocation), tránh các cú "giật lag" do hệ thống phải cấp phát lại bộ nhớ liên tục.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">panic</div><div class="topic-desc">Ngắt luồng thực thi khi gặp lỗi không thể phục hồi (Unrecoverable).</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">if err != nil { panic(err) }</code></pre>
+        <div class="kw-philosophy">Chỉ được sử dụng trong tình huống Crash-Early (Đổ vỡ sớm). Khi hệ thống rơi vào trạng thái rủi ro nghiêm trọng như kết nối Database thất bại toàn cục, panic sẽ ngay lập tức kích hoạt cơ chế cuộn ngược ngăn xếp (Unwinding the stack), kích hoạt tuần tự các hàm defer đã đăng ký trước khi sập chương trình.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">recover</div><div class="topic-desc">Chặn tiến trình Panic đang xảy ra để phục hồi luồng kiểm soát.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">defer func() {
+    if r := recover(); r != nil { ... }
+}()</code></pre>
+        <div class="kw-philosophy">Chỉ có hiệu lực khi được đặt bên trong các hàm defer. Nó hoạt động như một cái lưới hứng an toàn tại vòng ngoài cùng của các ứng dụng mạng lớn (ví dụ Web Server), chặn đứng đợt panic do một request tồi gây ra, bảo vệ toàn bộ tiến trình không bị kéo sập hệ lụy (Cascading failure).</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">int</div><div class="topic-desc">Số nguyên có dấu phụ thuộc kiến trúc.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">var count int = 100</code></pre>
+        <div class="kw-philosophy">Kiểu <code>int</code> trong Go tự động được căn chỉnh thành 32-bit hoặc 64-bit dựa trên hệ điều hành và CPU mục tiêu. Điều này mang lại hiệu suất toán học tối đa ở tầng vi xử lý mà không cần cấu hình phức tạp.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">float64</div><div class="topic-desc">Số thực dấu phẩy động độ chính xác kép (64-bit).</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">var pi float64 = 3.14159265359</code></pre>
+        <div class="kw-philosophy">Là chuẩn mặc định cho mọi số thực trong Go. Theo chuẩn IEEE-754, <code>float64</code> cung cấp độ chính xác an toàn cho đại đa số các tính toán, giảm thiểu tối đa các lỗi sai số làm tròn cộng dồn (rounding error) so với float32.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">string</div><div class="topic-desc">Chuỗi ký tự bất biến (Immutable text sequence).</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">var txt string = "Golang"</code></pre>
+        <div class="kw-philosophy">Được cấp phát như một mảng byte Read-Only. Thiết kế bất biến (Immutability) này cho phép nhiều cấu trúc dữ liệu có thể chia sẻ chung một chuỗi bộ nhớ một cách hoàn toàn an toàn (Thread-safe) mà không lo ngại về vấn đề cạnh tranh dữ liệu (Data races) trong môi trường xử lý đồng thời.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">bool</div><div class="topic-desc">Kiểu dữ liệu biểu diễn tính đúng/sai.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">var isValid bool</code></pre>
+        <div class="kw-philosophy">Hệ thống kiểu chặt chẽ của Go cấm tuyệt đối việc ép kiểu ngầm định giữa <code>bool</code> và số nguyên 0/1 (như trong C/C++). Thiết kế này nhổ tận gốc các lớp lỗi ẩn dụ về luận lý, buộc lập trình viên phải tường minh trong các câu lệnh rẽ nhánh.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">true</div><div class="topic-desc">Hằng số boolean đại diện cho trạng thái đúng.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">isValid = true</code></pre>
+        <div class="kw-philosophy">Là một trong số ít các hằng số không kiểu (untyped boolean constant) có sẵn của ngôn ngữ. Khác với từ khóa (keyword), <code>true</code> là một định danh (identifier) nên dù rất hiếm nhưng bạn vẫn có thể (và không nên) ghi đè (shadow) nó trong các phạm vi hàm.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">false</div><div class="topic-desc">Hằng số boolean đại diện cho trạng thái sai.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">isValid = false</code></pre>
+        <div class="kw-philosophy">Là giá trị mặc định (Zero Value) khi một biến boolean được khởi tạo nhưng không gán. Cơ chế Zero Value Semantics đảm bảo mọi biến <code>bool</code> đều bắt đầu ở một trạng thái an toàn là <code>false</code>, tránh các hành vi bất định do rác bộ nhớ.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">byte</div><div class="topic-desc">Bí danh của uint8, chuyên xử lý dữ liệu thô.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">var b byte = 0x41</code></pre>
+        <div class="kw-philosophy">Mặc dù bản chất là <code>uint8</code>, việc tách <code>byte</code> thành một bí danh (alias) độc lập cung cấp sự rõ ràng về ngữ nghĩa (Semantic clarity). Khi nhìn thấy một mảng <code>[]byte</code>, lập trình viên hiểu ngay đây là luồng nhị phân thuần túy (Network payload, File stream).</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">rune</div><div class="topic-desc">Bí danh của int32, đại diện cho một điểm mã Unicode.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">var r rune = '🔥'</code></pre>
+        <div class="kw-philosophy">Cột sống của triết lý thiết kế đặt UTF-8 làm tiêu chuẩn. Bằng cách định nghĩa <code>rune</code> là <code>int32</code>, Go có đủ không gian để nén bất kỳ ký tự Unicode (như Emoji) nào vào một giá trị nguyên vẹn, giải quyết triệt để lỗi "rách chữ" khi cắt xén chuỗi.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">uintptr</div><div class="topic-desc">Số nguyên không dấu đủ lớn để chứa một địa chỉ bộ nhớ.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">ptr := uintptr(unsafe.Pointer(&amp;x))</code></pre>
+        <div class="kw-philosophy">Là cầu nối duy nhất cho phép thực hiện các phép toán số học trên con trỏ (Pointer arithmetic) khi kết hợp với package <code>unsafe</code>. Tuy nhiên, uintptr chỉ là con số thuần túy, Garbage Collector (GC) không coi nó là con trỏ. Việc sử dụng đòi hỏi sự hiểu biết sâu sắc về vòng đời vùng nhớ (Memory model) để tránh việc GC giải phóng nhầm.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">comparable</div><div class="topic-desc">Ràng buộc kiểu (Type constraint) trong Generics.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">func Equal[T comparable](a, b T) bool</code></pre>
+        <div class="kw-philosophy">Được giới thiệu trong Go 1.18 cùng hệ thống Generics. Nó đại diện cho tập hợp tất cả các kiểu dữ liệu có thể sử dụng toán tử so sánh bằng (<code>==</code> và <code>!=</code>). Đây là khái niệm cốt lõi (Type bounds) giúp trình biên dịch xác minh tính hợp lệ của tham số kiểu tĩnh, đặc biệt khi thiết kế khóa (key) cho Hash Map tổng quát.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">copy</div><div class="topic-desc">Hàm tích hợp sao chép phần tử giữa hai Slice.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">copy(dst, src)</code></pre>
+        <div class="kw-philosophy">Thực thi lệnh di chuyển khối bộ nhớ an toàn (Safe memory block move). Tốc độ của <code>copy</code> cực kỳ nhanh do được dịch thẳng ra lệnh hợp ngữ copy vùng nhớ tối ưu của kiến trúc CPU tương ứng (memmove). Nó tự động xử lý mượt mà các tình huống vùng nhớ đích và nguồn đè lên nhau (Overlapping memory) mà không gây hỏng dữ liệu.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">delete</div><div class="topic-desc">Xóa phần tử khỏi Map bằng khóa (Key).</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">delete(m, "key")</code></pre>
+        <div class="kw-philosophy">Đảm nhiệm việc giải phóng slot trong cấu trúc Hash Table. Thao tác xóa diễn ra an toàn (Safe deletion), nghĩa là gọi delete với một khóa không tồn tại hoặc trên một Map nil sẽ hoàn toàn hợp lệ và không sinh ra lỗi văng chương trình (Panic), giúp luồng thực thi (control flow) không bị gián đoạn vô cớ.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">close</div><div class="topic-desc">Đóng Channel không cho phép gửi thêm dữ liệu.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">close(ch)</code></pre>
+        <div class="kw-philosophy">Mang ý nghĩa là một cơ chế đánh dấu trạng thái (Tombstone mechanism) hơn là giải phóng bộ nhớ. Đóng kênh là tín hiệu broadcast (phát thanh) thông báo cho tất cả các Goroutines đang lắng nghe rằng luồng dữ liệu đã cạn (EOF). Việc gửi dữ liệu vào kênh đã đóng sẽ gây Panic, bảo đảm tính nhất quán của vòng đời dữ liệu.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">clear</div><div class="topic-desc">Xóa sạch phần tử của Slice hoặc Map (Go 1.21+).</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">clear(m)</code></pre>
+        <div class="kw-philosophy">Với map, <code>clear</code> xóa toàn bộ entries. Với slice, nó gán zero value cho các phần tử trong phạm vi <code>len(s)</code>. Hàm này không đổi <code>len</code> của slice và cũng không cung cấp khái niệm capacity cho map, nên đừng hiểu nó như một API “reset capacity”.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">min</div><div class="topic-desc">Hàm tích hợp tìm giá trị nhỏ nhất (Go 1.21+).</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">m := min(a, b)</code></pre>
+        <div class="kw-philosophy">Dựa trên nền tảng Generics, <code>min</code> thay thế việc phải tự viết các hàm tiện ích cho từng kiểu dữ liệu. Trình biên dịch hiểu thấu đáo hàm này ở cấp độ AST, giúp tối ưu hoá trực tiếp thành tập lệnh nhảy điều kiện siêu tốc trên CPU (như CMP và CMOV).</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">max</div><div class="topic-desc">Hàm tích hợp tìm giá trị lớn nhất (Go 1.21+).</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">M := max(a, b, c)</code></pre>
+        <div class="kw-philosophy">Hỗ trợ danh sách tham số biến thiên (variadic) đối với mọi kiểu dữ liệu thoả mãn ràng buộc <code>cmp.Ordered</code>. <code>max</code> chấm dứt kỷ nguyên phải dùng thư viện <code>math.Max</code> (vốn ép kiểu mọi thứ thành float64 rất tốn kém hiệu năng).</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">complex64</div><div class="topic-desc">Số phức lưu bằng hai số float32.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">var z complex64</code></pre>
+        <div class="kw-philosophy">Chiếm 64 bit trong bộ nhớ (2 x 32 bit). Nó cho phép việc xử lý toán học liên quan đến số phức trở nên gọn nhẹ ở tầng bộ nhớ. Đây là sự kế thừa từ C99, biến Go thành công cụ sẵn sàng đáp ứng xử lý tín hiệu lượng lớn nhưng đòi hỏi tiết kiệm RAM.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">complex128</div><div class="topic-desc">Số phức lưu bằng hai số float64.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">var z complex128 = complex(3.0, 4.0)</code></pre>
+        <div class="kw-philosophy">Là bản chuẩn xác cao hơn của số phức. Trình biên dịch trực tiếp ánh xạ các phép tính cộng trừ nhân chia của kiểu này xuống các tập lệnh Floating-Point Unit (FPU), mang lại hiệu suất mà cấu trúc Struct tự định nghĩa không thể có được.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">complex</div><div class="topic-desc">Hàm tích hợp khởi tạo số phức từ hai số thực.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">z := complex(r, i)</code></pre>
+        <div class="kw-philosophy">"Gói" (pack) hai số thực (phần thực và phần ảo) thành một khối dữ liệu liền kề trên bộ nhớ. Không cần đẩy ngăn xếp hàm, trình biên dịch có thể nội tuyến (inline) nó thành lệnh máy tốc độ siêu cao.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">real</div><div class="topic-desc">Trích xuất phần thực (Real part) của số phức.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">r := real(z)</code></pre>
+        <div class="kw-philosophy">Đọc trực tiếp nửa bộ nhớ đầu tiên của cấu trúc số phức, mang lại an toàn kiểu dữ liệu nghiêm ngặt và độ trễ bằng 0 (zero overhead).</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">imag</div><div class="topic-desc">Trích xuất phần ảo (Imaginary part) của số phức.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">i := imag(z)</code></pre>
+        <div class="kw-philosophy">Đọc nửa vùng nhớ sau của cấu trúc số phức. Nó không copy dữ liệu vô nghĩa mà ánh xạ thẳng đến vùng nhớ vật lý, tối đa hóa CPU cache.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">print</div><div class="topic-desc">Hàm in chuỗi ký tự cơ bản không tự xuống dòng.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">print("Error: ", err)</code></pre>
+        <div class="kw-philosophy">Một primitive function được Hard-code sâu trong lõi. Không sinh ra phân bổ bộ nhớ dư thừa, đây là yếu tố sống còn để Go runtime báo lỗi hệ thống lúc chưa khởi chạy xong bộ quản lý bộ nhớ (Memory Allocator).</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">println</div><div class="topic-desc">Hàm in thông tin cơ bản có kèm newline.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">println("Status:", code)</code></pre>
+        <div class="kw-philosophy">Mặc dù bị coi là anti-pattern nếu mang vào mã production (nên dùng package <code>fmt</code>), <code>println</code> đóng vai trò phao cứu sinh, xuất thẳng ra stderr giúp phân tích Post-mortem khi hệ thống crash.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">uint</div><div class="topic-desc">Số nguyên không dấu phụ thuộc kiến trúc (32/64 bit).</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">var mask uint</code></pre>
+        <div class="kw-philosophy">Tận dụng tối đa băng thông bộ nhớ để nhân đôi giới hạn giá trị dương cao nhất so với <code>int</code>. Lập trình viên Go thường hạn chế dùng <code>uint</code> trong logic thông thường để tránh bug lật về số dương khổng lồ do trừ quá tay (underflow).</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">int8 / int16 / int32 / int64</div><div class="topic-desc">Họ số nguyên có dấu với kích thước cố định.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">var port int16 = 8080</code></pre>
+        <div class="kw-philosophy">Đảm bảo cấu trúc bộ nhớ tuyệt đối bất biến trên mọi CPU. Là ranh giới kiên cố trong lập trình CGO, phân tích file nhị phân (Binary parsing) và bảo toàn tính toàn vẹn (Integrity) khi truyền qua mạng không màng Endianness.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">uint8 / uint16 / uint32 / uint64</div><div class="topic-desc">Họ số nguyên không dấu với kích thước cố định.</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">var hash uint32 = 0xCAFEBABE</code></pre>
+        <div class="kw-philosophy">Là nền tảng cốt lõi của các thuật toán mã hoá (Cryptography), Hash và nén. Vì không có số âm, phép dịch bit `&gt;&gt;` thực hiện dịch lô-gic (Zero-fill), giải quyết dứt điểm các cơn đau đầu về bit-sign khi thao tác trực tiếp với dải byte nhị phân thô.</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="kw-title">float32</div><div class="topic-desc">Số thực dấu phẩy động độ chính xác đơn (32-bit).</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <pre><code class="language-go">var ratio float32 = 0.5</code></pre>
+        <div class="kw-philosophy">Trong khi <code>float64</code> là tiêu chuẩn an toàn cho số liệu tính toán học thuật, <code>float32</code> là nhân tố chìa khóa để giảm một nửa dung lượng lưu trữ bộ nhớ và đẩy mạnh tốc độ xử lý đồ họa vector (nhờ các tập lệnh song song SIMD). Rất cần thiết khi mã Go điều khiển thư viện máy học, OpenGL/Vulkan, hoặc logic game mật độ dữ liệu cao.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</div>
+</div>
+<script src="script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+</body>
+</html>

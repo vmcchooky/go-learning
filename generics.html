@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Go 1.26.4 — Generics</title>
+<link rel="stylesheet" href="style.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+</head>
+<body>
+<div class="container">
+<header style="cursor: pointer;" title="Về trang chủ">
+  <h1>Go 1.26.4 — Tổng hợp từ Cơ bản đến Nâng cao</h1>
+  <p>Tài liệu tham khảo toàn diện · Phiên bản 1.26.4 · Ra mắt 02/06/2026</p>
+  <span class="badge">go.dev/dl/</span>
+</header>
+<div class="content">
+<!-- GENERICS -->
+<div id="generics" class="section active">
+  <div id="generics-cards" class="topic-grid">
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Type parameters & inference</div><div class="topic-desc">Generic functions, type inference, instantiation</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">type params</span><span class="tag">inference</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">// Đa type parameter
+func Reduce[T, R any](
+    slice []T,
+    initial R,
+    fn func(R, T) R,
+) R {
+    result := initial
+    for _, v := range slice {
+        result = fn(result, v)
+    }
+    return result
+}
+
+total := Reduce([]int{1,2,3}, 0,
+    func(acc, n int) int { return acc + n })
+
+// Custom constraint với method
+type Ordered interface {
+    int | float64 | string
+}
+
+func Min[T Ordered](a, b T) T {
+    if a &lt; b { return a }
+    return b
+}
+
+// Explicit instantiation (khi inference fail)
+Min[int](3, 5)</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Iter package & range-over-func</div><div class="topic-desc">iter.Seq, iter.Seq2, custom iterators với for-range</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">iter.Seq</span><span class="tag">range-over-func</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">import "iter"
+
+// iter.Seq[V] = func(yield func(V) bool)
+func Fibonacci() iter.Seq[int] {
+    return func(yield func(int) bool) {
+        a, b := 0, 1
+        for {
+            if !yield(a) { return }
+            a, b = b, a+b
+        }
+    }
+}
+
+// Range over custom iterator
+for n := range Fibonacci() {
+    if n &gt; 100 { break }
+    fmt.Println(n)
+}
+
+// iter.Seq2[K, V] cho key-value pairs
+func Enumerate[T any](s []T) iter.Seq2[int, T] {
+    return func(yield func(int, T) bool) {
+        for i, v := range s {
+            if !yield(i, v) { return }
+        }
+    }
+}
+
+for i, v := range Enumerate([]string{"a","b"}) {
+    fmt.Println(i, v)
+}
+
+// slices.Collect — tạo slice từ iterator
+all := slices.Collect(Fibonacci())</code></pre>
+        <div class="note"><strong>Range-over-func</strong> là tính năng mạnh mẽ cho custom iterators, thay thế pattern dùng channel-based iteration hiệu quả hơn nhiều.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Generic type aliases</div><div class="topic-desc">Type alias với type parameter — cụ thể hóa generic types</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">type alias</span><span class="tag">generics</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">type Node[T any] struct {
+    Value T
+    Next  *Node[T]
+}
+
+// Type alias đơn giản (không generic) — đã có từ 1.9
+type IntNode = Node[int]
+
+// Generic type alias
+type GenericNode[T any] = Node[T]
+
+// Dùng generic type alias
+var n1 GenericNode[string] = Node[string]{Value: "hello"}
+var n2 IntNode = Node[int]{Value: 42}
+
+// Useful pattern: alias cho generic container
+type Result[T any] struct {
+    Data  T
+    Error error
+}
+type IntResult = Result[int]  // cụ thể hóa
+
+func fetchInt() IntResult {
+    return IntResult{Data: 42, Error: nil}
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">slices, maps, cmp packages</div><div class="topic-desc">stdlib utilities: Sort, BinarySearch, Contains, Compare, Min, Max</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">slices</span><span class="tag">maps</span><span class="tag">cmp</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">import (
+    "slices"
+    "maps"
+    "cmp"
+)
+
+// slices package
+s := []int{3, 1, 4, 1, 5}
+slices.Sort(s)
+slices.SortFunc(s, func(a, b int) int { return a - b })
+idx, found := slices.BinarySearch(s, 3)
+slices.Contains(s, 4)
+s2 := slices.Clone(s)
+s = slices.Compact(s) // remove consecutive duplicates, phải gán lại
+
+// maps package
+m := map[string]int{"a": 1, "b": 2}
+keys := slices.Collect(maps.Keys(m))   // []string, thứ tự không đảm bảo
+vals := slices.Collect(maps.Values(m)) // []int, thứ tự không đảm bảo
+m2 := maps.Clone(m)
+maps.DeleteFunc(m, func(k string, v int) bool {
+    return v == 0
+})
+
+// cmp package
+cmp.Compare(1, 2)   // -1, 0, 1
+cmp.Min(3, 5)       // 3
+cmp.Max(3, 5)       // 5
+
+// min/max built-in
+x := min(1, 2, 3)  // 1 (built-in, multi-arg)
+y := max(1, 2, 3)  // 3</code></pre>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+</div>
+</div>
+<script src="script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+</body>
+</html>

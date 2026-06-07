@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Go 1.26.4 — Hàm & Closure</title>
+<link rel="stylesheet" href="style.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+</head>
+<body>
+<div class="container">
+<header style="cursor: pointer;" title="Về trang chủ">
+  <h1>Go 1.26.4 — Tổng hợp từ Cơ bản đến Nâng cao</h1>
+  <p>Tài liệu tham khảo toàn diện · Phiên bản 1.26.4 · Ra mắt 02/06/2026</p>
+  <span class="badge">go.dev/dl/</span>
+</header>
+<div class="content">
+<!-- FUNCS -->
+<div id="funcs" class="section active">
+  <div id="funcs-cards" class="topic-grid">
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Variadic & first-class functions</div><div class="topic-desc">...T, function type, higher-order functions</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">variadic</span><span class="tag">first-class</span><span class="tag">higher-order</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">// Variadic function
+func sum(nums ...int) int {
+    total := 0
+    for _, n := range nums { total += n }
+    return total
+}
+sum(1, 2, 3)        // = 6
+nums := []int{1, 2, 3}
+sum(nums...)        // unpack slice
+
+// Function type
+type Predicate func(int) bool
+
+func filter(nums []int, fn Predicate) []int {
+    result := []int{}
+    for _, n := range nums {
+        if fn(n) { result = append(result, n) }
+    }
+    return result
+}
+
+isEven := func(n int) bool { return n%2 == 0 }
+evens := filter([]int{1,2,3,4}, isEven) // [2,4]</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Closure & capture</div><div class="topic-desc">Hàm lồng nhau, biến capture, counter, option pattern</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">closure</span><span class="tag">capture</span><span class="tag">state</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">// Closure capture by reference
+func makeCounter() func() int {
+    count := 0
+    return func() int {
+        count++
+        return count
+    }
+}
+c := makeCounter()
+c() // 1
+c() // 2
+
+// Loop variable tự động rebind mỗi iteration
+callbacks := []func(){}
+for i := 0; i &lt; 3; i++ {
+    callbacks = append(callbacks, func() { fmt.Println(i) })
+}
+for _, cb := range callbacks { cb() } // 0, 1, 2
+
+// Functional Options Pattern
+type Option func(*Server)
+func WithPort(p int) Option {
+    return func(s *Server) { s.port = p }
+}
+s := NewServer(WithPort(8080))</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Named return values & multiple returns</div><div class="topic-desc">Naked return, multiple return values, error pattern</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">named return</span><span class="tag">multiple return</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">// Multiple return values
+func divide(a, b float64) (float64, error) {
+    if b == 0 { return 0, errors.New("division by zero") }
+    return a / b, nil
+}
+
+// Named return — tự động khai báo biến
+func minMax(nums []int) (min, max int) {
+    min, max = nums[0], nums[0]
+    for _, n := range nums[1:] {
+        if n &lt; min { min = n }
+        if n &gt; max { max = n }
+    }
+    return  // naked return: trả về min, max
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Method expressions & values</div><div class="topic-desc">Value receiver vs pointer receiver, method set</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">receiver</span><span class="tag">method set</span><span class="tag">value/pointer</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">type Point struct { X, Y float64 }
+
+// Value receiver — không thay đổi gốc
+func (p Point) Distance() float64 {
+    return math.Sqrt(p.X*p.X + p.Y*p.Y)
+}
+
+// Pointer receiver — có thể thay đổi
+func (p *Point) Scale(factor float64) {
+    p.X *= factor; p.Y *= factor
+}
+
+// Method expression (function với receiver là arg đầu)
+dist := Point.Distance
+dist(Point{3, 4})    // = 5.0
+
+// Method value (bound to specific instance)
+p := &amp;Point{3, 4}
+scale := p.Scale
+scale(2)              // p.X=6, p.Y=8</code></pre>
+        <div class="note"><strong>Quy tắc:</strong> Nếu bất kỳ method nào cần pointer receiver, nên dùng pointer receiver cho <em>toàn bộ</em> type đó. Pointer receiver có method set lớn hơn value receiver.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+</div>
+</div>
+<script src="script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+</body>
+</html>

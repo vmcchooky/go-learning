@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Go 1.26.4 — Kỹ thuật nâng cao</title>
+<link rel="stylesheet" href="style.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+</head>
+<body>
+<div class="container">
+<header style="cursor: pointer;" title="Về trang chủ">
+  <h1>Go 1.26.4 — Tổng hợp từ Cơ bản đến Nâng cao</h1>
+  <p>Tài liệu tham khảo toàn diện · Phiên bản 1.26.4 · Ra mắt 02/06/2026</p>
+  <span class="badge">go.dev/dl/</span>
+</header>
+<div class="content">
+<!-- ADVANCED -->
+<div id="advanced" class="section active">
+  <div id="advanced-cards" class="topic-grid">
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Reflection (reflect)</div><div class="topic-desc">reflect.Type, reflect.Value, struct field inspection</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">reflect</span><span class="tag">TypeOf</span><span class="tag">ValueOf</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">import "reflect"
+
+func inspect(v any) {
+    t := reflect.TypeOf(v)
+    val := reflect.ValueOf(v)
+
+    fmt.Println(t.Kind())       // struct, int, slice...
+    fmt.Println(t.Name())       // type name
+
+    if t.Kind() == reflect.Struct {
+        for i := 0; i &lt; t.NumField(); i++ {
+            f := t.Field(i)
+            fmt.Printf("%s %s = %v tag=%s\n",
+                f.Name, f.Type,
+                val.Field(i).Interface(),
+                f.Tag.Get("json"))
+        }
+    }
+}
+
+// Set value via reflection
+func setField(obj any, name string, val any) {
+    v := reflect.ValueOf(obj).Elem()  // deref pointer
+    f := v.FieldByName(name)
+    if f.CanSet() {
+        f.Set(reflect.ValueOf(val))
+    }
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">unsafe & low-level tricks</div><div class="topic-desc">unsafe.Pointer, uintptr, zero-copy conversion</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">unsafe</span><span class="tag">Pointer</span><span class="tag">uintptr</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">import "unsafe"
+
+// String ↔ []byte zero-copy (read-only!)
+func StringToBytes(s string) []byte {
+    return unsafe.Slice(unsafe.StringData(s), len(s))
+}
+
+// Struct field offset
+type T struct { A, B, C int }
+var t T
+offsetB := unsafe.Offsetof(t.B)  // bytes từ đầu struct
+
+// Kích thước
+unsafe.Sizeof(t)       // kích thước struct
+unsafe.Alignof(t.B)   // alignment requirement
+
+// Cảnh báo: unsafe phá vỡ type safety
+// Chỉ dùng khi cần thiết cho performance</code></pre>
+        <div class="note"><strong>Cảnh báo:</strong> <code>unsafe</code> có thể gây crash, race condition, undefined behavior. Chỉ dùng khi đã benchmark và không có cách khác.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Build tags & conditional compilation</div><div class="topic-desc">//go:build, OS/arch-specific files, toolchain directives</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">build tags</span><span class="tag">go:build</span><span class="tag">GOOS</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">// file: myfile_linux.go (tự động cho Linux)
+// file: myfile_windows.go (tự động cho Windows)
+
+// Mỗi file chỉ có tối đa một //go:build line
+
+// file: math_linux_amd64.go
+//go:build linux &amp;&amp; amd64
+
+// file: purego.go
+//go:build !cgo
+
+// file: go126plus.go
+//go:build go1.26
+
+// file: integration_test.go
+//go:build integration
+// go test -tags=integration ./...
+
+// Toolchain directives
+//go:generate go run gen.go
+//go:noinline
+//go:nosplit
+//go:linkname localname importpath.name</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Testing & table-driven tests</div><div class="topic-desc">testing.T, table-driven, benchmarks, fuzzing, testify</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">testing</span><span class="tag">benchmark</span><span class="tag">table-driven</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">func TestAdd(t *testing.T) {
+    tests := []struct {
+        name    string
+        a, b    int
+        want    int
+    }{
+        {"positive", 1, 2, 3},
+        {"negative", -1, -2, -3},
+        {"zero", 0, 0, 0},
+    }
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            got := Add(tc.a, tc.b)
+            if got != tc.want {
+                t.Errorf("Add(%d,%d)=%d, want %d",
+                    tc.a, tc.b, got, tc.want)
+            }
+        })
+    }
+}
+
+// Benchmark
+func BenchmarkAdd(b *testing.B) {
+    for i := 0; i &lt; b.N; i++ {
+        Add(1, 2)
+    }
+}
+// go test -bench=. -benchmem ./...
+
+// Fuzzing
+func FuzzParse(f *testing.F) {
+    f.Add("hello")
+    f.Fuzz(func(t *testing.T, s string) {
+        Parse(s)  // không được panic
+    })
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">log/slog — Structured Logging</div><div class="topic-desc">Logging có cấu trúc chính thức trong stdlib</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">slog</span><span class="tag">structured</span><span class="tag">logging</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">import "log/slog"
+
+// Default logger
+slog.Info("user logged in", "user_id", 123, "ip", "127.0.0.1")
+slog.Error("db error", "err", err)
+
+// JSON handler
+logger := slog.New(slog.NewJSONHandler(os.Stdout, &amp;slog.HandlerOptions{
+    Level: slog.LevelDebug,
+}))
+logger.Info("request",
+    "method", "GET",
+    "path", "/api/v1/users",
+    "duration_ms", 42,
+)
+
+// Set default logger
+slog.SetDefault(logger)
+
+// Group attributes
+logger.Info("request", slog.Group("http",
+    "method", "POST",
+    "status", 200,
+))</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">HTTP Routing (ServeMux)</div><div class="topic-desc">Method-based routing, path parameters, wildcard patterns</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">http</span><span class="tag">routing</span><span class="tag">ServeMux</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">mux := http.NewServeMux()
+
+// Method + path pattern
+mux.HandleFunc("GET /users", listUsers)
+mux.HandleFunc("POST /users", createUser)
+mux.HandleFunc("GET /users/{id}", getUser)
+mux.HandleFunc("PUT /users/{id}", updateUser)
+mux.HandleFunc("DELETE /users/{id}", deleteUser)
+
+// Wildcard {id} — truy cập bằng PathValue
+func getUser(w http.ResponseWriter, r *http.Request) {
+    id := r.PathValue("id")
+    fmt.Fprintf(w, "User ID: %s", id)
+}
+
+// Wildcard {path...} — match phần còn lại
+mux.HandleFunc("GET /static/{path...}", serveStatic)
+
+func serveStatic(w http.ResponseWriter, r *http.Request) {
+    path := r.PathValue("path")
+    http.ServeFile(w, r, "static/"+path)
+}
+
+http.ListenAndServe(":8080", mux)</code></pre>
+        <div class="note">ServeMux mới có thể thay thế nhiều trường hợp dùng gorilla/mux hay chi mà không cần dependency bên ngoài.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">WebAssembly</div><div class="topic-desc">go:wasmexport, reactor/library build mode, WASI</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">wasm</span><span class="tag">wasmexport</span><span class="tag">wasip1</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">//go:wasmexport — export function đến WASM host
+//go:wasmexport add
+func add(a, b int32) int32 {
+    return a + b
+}
+
+// Build cho WASM target:
+// GOOS=js GOARCH=wasm go build -o main.wasm .
+
+// Build WASI reactor:
+// GOOS=wasip1 GOARCH=wasm go build \
+//   -buildmode=c-shared -o reactor.wasm .
+// Host phải gọi _initialize trước khi dùng exported functions.
+
+// Trong JavaScript:
+// const go = new Go();
+// WebAssembly.instantiateStreaming(
+//     fetch("main.wasm"), go.importObject
+// ).then(result => { go.run(result.instance); });</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">CGo & FFI</div><div class="topic-desc">Gọi C code từ Go, cgo directives, memory sharing</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">cgo</span><span class="tag">C</span><span class="tag">ffi</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">/*
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+
+void sayHello(const char* name) {
+    printf("Hello, %s!\n", name);
+}
+*/
+import "C"
+import "unsafe"
+
+func main() {
+    name := C.CString("World")
+    defer C.free(unsafe.Pointer(name))
+    C.sayHello(name)
+}
+
+// Cgo directives
+// #cgo LDFLAGS: -lm
+// #cgo CFLAGS: -I/usr/local/include
+// #cgo pkg-config: libpng</code></pre>
+        <div class="note"><strong>Lưu ý:</strong> CGo làm chậm build time và phá vỡ cross-compilation đơn giản. Cân nhắc pure Go trước khi dùng CGo.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Profile-Guided Optimization (PGO)</div><div class="topic-desc">Tối ưu dựa trên profile thực tế, cải thiện 2–14% performance</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">pgo</span><span class="tag">optimization</span><span class="tag">profile</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">// Bước 1: Thu thập CPU profile từ workload thật
+// curl http://localhost:6060/debug/pprof/profile?seconds=30 &gt; default.pgo
+
+// Bước 2: Build với PGO
+// go build -pgo=default.pgo .
+
+// Hoặc dùng pprof tự động từ benchmark:
+// go test -bench=. -cpuprofile=cpu.pgo ./...
+// go build -pgo=cpu.pgo .
+
+// PGO không yêu cầu đổi source code
+// Chất lượng profile quyết định hiệu quả tối ưu</code></pre>
+        <div class="note">PGO là cách hiệu quả nhất để cải thiện performance mà không cần rewrite code. Chỉ cần build lại với profile từ production.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Modules & Tool Directive</div><div class="topic-desc">go.mod, tool directive, workspace, vendor</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">go.mod</span><span class="tag">tool</span><span class="tag">workspace</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">// go.mod
+// module github.com/user/myapp
+// go 1.26
+// require golang.org/x/sync v0.20.0
+
+// tool directive — quản lý CLI tools
+// go get -tool golang.org/x/tools/cmd/stringer
+// go tool stringer -type=MyEnum .
+
+// go.work — workspace cho nhiều module
+// go work init ./module1 ./module2
+
+// Dọn dẹp dependencies
+// go mod tidy
+// go mod vendor
+// go list -m all
+// go mod graph</code></pre>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+</div>
+<script src="script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Go 1.26.4 — Struct & Interface</title>
+<link rel="stylesheet" href="style.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+</head>
+<body>
+<div class="container">
+<header style="cursor: pointer;" title="Về trang chủ">
+  <h1>Go 1.26.4 — Tổng hợp từ Cơ bản đến Nâng cao</h1>
+  <p>Tài liệu tham khảo toàn diện · Phiên bản 1.26.4 · Ra mắt 02/06/2026</p>
+  <span class="badge">go.dev/dl/</span>
+</header>
+<div class="content">
+<!-- STRUCTS & INTERFACES -->
+<div id="structs" class="section active">
+  <div id="structs-cards" class="topic-grid">
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Struct embedding</div><div class="topic-desc">Composition, promoted methods, anonymous fields, struct tags</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">embedding</span><span class="tag">composition</span><span class="tag">promoted methods</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">type Animal struct { Name string }
+func (a Animal) Speak() string { return a.Name + " speaks" }
+
+type Dog struct {
+    Animal           // anonymous field (embedded)
+    Breed string
+}
+
+d := Dog{Animal: Animal{"Rex"}, Breed: "Lab"}
+d.Speak()     // promoted: d.Animal.Speak()
+d.Name        // promoted field: d.Animal.Name
+
+// Embedding interface
+type ReadWriter interface {
+    io.Reader     // embed interface
+    io.Writer
+}
+
+// Struct tags
+type User struct {
+    Name  string `json:"name" db:"user_name"`
+    Email string `json:"email,omitempty"`
+    Age   int    `json:"-"`  // bỏ qua khi encode
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Interface & implicit implementation</div><div class="topic-desc">Duck typing, nil interface, interface composition</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">interface</span><span class="tag">duck typing</span><span class="tag">nil interface</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">type Stringer interface {
+    String() string
+}
+
+type Person struct { Name, Email string }
+func (p Person) String() string {
+    return p.Name + " &lt;" + p.Email + "&gt;"
+}
+// Person tự động implement Stringer (không cần khai báo)
+
+// Nil interface vs nil pointer trong interface
+var s Stringer           // nil: (type=nil, value=nil)
+var p *Person            // nil pointer
+var s2 Stringer = p     // NOT nil! (type=*Person, value=nil)
+s2 != nil               // true — BẪY PHỔ BIẾN!
+
+// Interface comparison
+var a, b Stringer
+a == b // so sánh cả type và value</code></pre>
+        <div class="note"><strong>Bẫy:</strong> Một interface chứa non-nil pointer sẽ KHÔNG bằng nil dù pointer đó là nil. Luôn kiểm tra error bằng <code>err != nil</code> chứ không phải <code>err == nil</code> sau khi assign.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Generics với constraints</div><div class="topic-desc">Type parameters, generic structs, type inference</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">generics</span><span class="tag">type parameters</span><span class="tag">constraints</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">// Generic function
+func Map[T, U any](s []T, fn func(T) U) []U {
+    result := make([]U, len(s))
+    for i, v := range s { result[i] = fn(v) }
+    return result
+}
+
+// Type inference
+nums := Map([]int{1,2,3}, func(n int) string {
+    return fmt.Sprint(n)
+})
+
+// Generic struct
+type Stack[T any] struct { items []T }
+func (s *Stack[T]) Push(v T) { s.items = append(s.items, v) }
+func (s *Stack[T]) Pop() (T, bool) {
+    if len(s.items) == 0 { var zero T; return zero, false }
+    n := len(s.items) - 1
+    v := s.items[n]
+    s.items = s.items[:n]
+    return v, true
+}
+
+var s Stack[int]
+s.Push(1); s.Push(2)
+v, _ := s.Pop() // v = 2</code></pre>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</div>
+</div>
+<script src="script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+</body>
+</html>
