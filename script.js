@@ -1,6 +1,40 @@
 let fuse = null;
 let searchDebounceTimer = null;
 
+function getOverviewPages() {
+  return {
+    'Cơ bản': 'basics.html',
+    'Kiểu dữ liệu': 'types.html',
+    'Hàm & Closure': 'funcs.html',
+    'Struct & Interface': 'structs.html',
+    'Concurrency': 'concurrency.html',
+    'Generics': 'generics.html',
+    'Memory & GC': 'memory.html',
+    'Nâng cao': 'advanced.html',
+    'Keywords': 'keywords.html'
+  };
+}
+
+function updateOverviewCounts() {
+  if (!Array.isArray(window.SEARCH_DATA)) return;
+
+  const countsByUrl = {};
+  window.SEARCH_DATA.forEach(item => {
+    countsByUrl[item.url] = (countsByUrl[item.url] || 0) + 1;
+  });
+
+  document.querySelectorAll('.overview-card[data-page]').forEach(card => {
+    const page = card.dataset.page;
+    const count = countsByUrl[page];
+    const countEl = card.querySelector('.overview-count');
+    if (!countEl || !count) return;
+
+    countEl.textContent = page === 'keywords.html'
+      ? `${count} mục tra cứu`
+      : `${count} chủ đề`;
+  });
+}
+
 function showSection(id){
   const section = document.getElementById(id);
   if (!section) {
@@ -114,6 +148,8 @@ function clearGlobalSearch(){
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  updateOverviewCounts();
+
   // Global Search bindings
   const searchInput = document.getElementById('globalSearch');
   if (searchInput) {
@@ -133,21 +169,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Overview card click binding
+  const overviewPages = getOverviewPages();
   document.querySelectorAll('.overview-card').forEach(card => {
     card.addEventListener('click', () => {
       const label = card.querySelector('.overview-label').textContent;
-      const pages = {
-        'Cơ bản': 'basics.html',
-        'Kiểu dữ liệu': 'types.html',
-        'Hàm & Closure': 'funcs.html',
-        'Struct & Interface': 'structs.html',
-        'Concurrency': 'concurrency.html',
-        'Generics': 'generics.html',
-        'Memory & GC': 'memory.html',
-        'Nâng cao': 'advanced.html',
-        'Keywords': 'keywords.html'
-      };
-      if (pages[label]) window.location.href = pages[label];
+      const page = card.dataset.page || overviewPages[label];
+      if (page) window.location.href = page;
     });
   });
 
