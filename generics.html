@@ -20,150 +20,194 @@
   <div id="generics-cards" class="topic-grid">
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Type parameters & inference</div><div class="topic-desc">Generic functions, type inference, instantiation</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Type parameters, inference & instantiation</div><div class="topic-desc">generic functions, type inference, explicit instantiation và tư duy dùng generics đúng chỗ</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">type params</span><span class="tag">inference</span><span class="level-badge level-inter">trung cấp</span></div>
-<pre><code class="language-go">// Đa type parameter
-func Reduce[T, R any](
-    slice []T,
-    initial R,
-    fn func(R, T) R,
-) R {
-    result := initial
-    for _, v := range slice {
-        result = fn(result, v)
+        <div class="tag-list"><span class="tag">type params</span><span class="tag">inference</span><span class="tag">instantiation</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">func Map[T, U any](items []T, fn func(T) U) []U {
+    out := make([]U, len(items))
+    for i, item := range items {
+        out[i] = fn(item)
     }
-    return result
+    return out
 }
 
-total := Reduce([]int{1,2,3}, 0,
-    func(acc, n int) int { return acc + n })
+labels := Map([]int{1, 2, 3}, func(n int) string {
+    return fmt.Sprintf("n=%d", n)
+})
+fmt.Println(labels) // [n=1 n=2 n=3]
 
-// Custom constraint với method
-type Ordered interface {
-    int | float64 | string
+func Zero[T any]() T {
+    var zero T
+    return zero
 }
 
-func Min[T Ordered](a, b T) T {
-    if a &lt; b { return a }
-    return b
-}
-
-// Explicit instantiation (khi inference fail)
-Min[int](3, 5)</code></pre>
+fmt.Println(Zero[int]()) // explicit instantiation</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Generics cho phép một hàm làm việc với nhiều kiểu dữ liệu mà vẫn giữ type safety ở compile time. Đây là cách Go tái sử dụng thuật toán mà không cần rơi về <code>any</code> quá sớm.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Go thường suy luận được type arguments từ tham số đầu vào, nên nhiều lời gọi không cần viết <code>[T]</code> tường minh. Khi compiler không có đủ thông tin để suy luận, bạn phải explicit instantiation như <code>Zero[int]()</code>.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người tưởng generics là “dynamic typing”, nhưng không phải. Type parameter vẫn được kiểm tra rất chặt ở compile time. Một lỗi khác là generic hóa cả những hàm vốn chỉ phục vụ một domain type cụ thể.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng khi bạn có cùng một thuật toán áp dụng tự nhiên cho nhiều type khác nhau như map, reduce, filter, min/max, container helpers.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Iter package & range-over-func</div><div class="topic-desc">iter.Seq, iter.Seq2, custom iterators với for-range</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Constraints, comparable & ~</div><div class="topic-desc">type sets, underlying types, custom constraints và vì sao comparable rất quan trọng</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">iter.Seq</span><span class="tag">range-over-func</span><span class="level-badge level-adv">nâng cao</span></div>
+        <div class="tag-list"><span class="tag">constraints</span><span class="tag">comparable</span><span class="tag">~</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">type Signed interface {
+    ~int | ~int8 | ~int16 | ~int32 | ~int64
+}
+
+func Sum[T Signed](items []T) T {
+    var total T
+    for _, item := range items {
+        total += item
+    }
+    return total
+}
+
+type UserID int64
+fmt.Println(Sum([]UserID{10, 20, 30})) // 60
+
+func IndexOf[T comparable](items []T, target T) int {
+    for i, item := range items {
+        if item == target {
+            return i
+        }
+    }
+    return -1
+}</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Constraint là “hợp đồng kiểu” cho type parameter. Chúng được mô tả bằng interface kiểu mới của generics: không phải để lưu value runtime, mà để định nghĩa tập type được phép dùng.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>comparable</code> cần thiết khi bạn muốn dùng <code>==</code> hoặc <code>!=</code>. Dấu <code>~</code> nghĩa là chấp nhận mọi defined type có underlying type phù hợp, nên <code>UserID</code> vẫn thỏa <code>~int64</code>.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> <code>slice</code>, <code>map</code>, và <code>func</code> không thỏa <code>comparable</code>. Nhiều người cũng tự viết lại constraint ordered cơ bản, trong khi với nhiều case thật tế bạn có thể dùng luôn <code>cmp.Ordered</code> của stdlib.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng custom constraint khi thuật toán cần toán tử, method, hoặc một nhóm type cụ thể mà <code>any</code> là quá rộng.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Generic types, methods & zero values</div><div class="topic-desc">generic struct, methods trên type generic, zero value pattern và các gotcha phổ biến</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">generic struct</span><span class="tag">methods</span><span class="tag">zero value</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">type Stack[T any] struct {
+    items []T
+}
+
+func (s *Stack[T]) Push(v T) {
+    s.items = append(s.items, v)
+}
+
+func (s *Stack[T]) Pop() (T, bool) {
+    if len(s.items) == 0 {
+        var zero T
+        return zero, false
+    }
+    n := len(s.items) - 1
+    v := s.items[n]
+    var zero T
+    s.items[n] = zero // clear reference để GC có thể thu hồi object cũ nếu cần
+    s.items = s.items[:n]
+    return v, true
+}
+
+var s Stack[string] // zero value vẫn dùng được
+s.Push("go")
+s.Push("gen")
+v, ok := s.Pop()
+fmt.Println(v, ok) // gen true</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Generic type rất hợp cho container và helper structures như stack, set, cache wrapper, option/result containers. Chúng cho phép tái sử dụng một kiểu dữ liệu cho nhiều loại phần tử khác nhau.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Method trên generic type dùng lại type parameter từ receiver như <code>Stack[T]</code>. Khi cần zero value của <code>T</code>, idiom chuẩn là <code>var zero T</code>. Nếu container bỏ phần tử ra khỏi slice nhưng backing array còn sống lâu, việc clear slot cũ giúp tránh giữ reference không cần thiết. Nhiều type generic trong Go vẫn nên cố thiết kế để zero value dùng được.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Generic methods với type parameter mới riêng cho method không được hỗ trợ như trong một số ngôn ngữ khác. Ngoài ra, đừng generic hóa mọi domain model như <code>User</code> hay <code>Order</code> nếu điều đó chỉ làm API khó đọc hơn.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng cho data structures và reusable building blocks, không phải để “biến mọi thứ thành framework”.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Iter package & range-over-func</div><div class="topic-desc">iter.Seq, iter.Seq2, iter.Pull và custom iterators trong Go 1.23+ vẫn dùng tốt ở 1.26.4</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">iter.Seq</span><span class="tag">range-over-func</span><span class="tag">Pull</span><span class="level-badge level-adv">nâng cao</span></div>
 <pre><code class="language-go">import "iter"
 
-// iter.Seq[V] = func(yield func(V) bool)
-func Fibonacci() iter.Seq[int] {
+func UpTo(n int) iter.Seq[int] {
     return func(yield func(int) bool) {
-        a, b := 0, 1
-        for {
-            if !yield(a) { return }
-            a, b = b, a+b
+        for i := range n {
+            if !yield(i) {
+                return
+            }
         }
     }
 }
 
-// Range over custom iterator
-for n := range Fibonacci() {
-    if n &gt; 100 { break }
-    fmt.Println(n)
+for v := range UpTo(5) {
+    fmt.Println(v)
 }
 
-// iter.Seq2[K, V] cho key-value pairs
-func Enumerate[T any](s []T) iter.Seq2[int, T] {
-    return func(yield func(int, T) bool) {
-        for i, v := range s {
-            if !yield(i, v) { return }
-        }
-    }
-}
+next, stop := iter.Pull(UpTo(3))
+defer stop()
+fmt.Println(next()) // 0 true
 
-for i, v := range Enumerate([]string{"a","b"}) {
-    fmt.Println(i, v)
-}
-
-// slices.Collect — tạo slice từ iterator
-all := slices.Collect(Fibonacci())</code></pre>
-        <div class="note"><strong>Range-over-func</strong> là tính năng mạnh mẽ cho custom iterators, thay thế pattern dùng channel-based iteration hiệu quả hơn nhiều.</div>
+all := slices.Collect(UpTo(5))
+fmt.Println(all) // [0 1 2 3 4]</code></pre>
+        <div class="note"><strong>Ý chính:</strong> <code>iter</code> và range-over-func là một hướng rất mạnh của Go hiện đại để xây iterator không cần channel. Chúng đặc biệt hợp cho traversal trong memory, library APIs, và các adapter giữa collection với pipeline xử lý.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>iter.Seq[V]</code> là một hàm nhận <code>yield</code>. Iterator dừng khi hết dữ liệu hoặc khi <code>yield</code> trả về <code>false</code>. Nếu dùng <code>iter.Pull</code> và không đọc đến hết, bạn nên gọi <code>stop()</code>, thường bằng <code>defer stop()</code>.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người nhầm iterator kiểu này với goroutine/channel iteration. Chúng không phải là concurrency primitive. Một bẫy khác là gọi <code>slices.Collect</code> trên một sequence vô hạn rồi tự treo chương trình.</div>
+        <div class="note"><strong>Đọc sau:</strong> Đây là tính năng xuất hiện từ Go 1.23 và vẫn là một phần rất đáng chú ý trong Go 1.26.4. Nếu làm thư viện, bạn nên cân nhắc naming conventions của package <code>iter</code> như <code>All</code>, <code>Values</code>, <code>Backward</code>.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Generic type aliases</div><div class="topic-desc">Type alias với type parameter — cụ thể hóa generic types</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Generic type aliases</div><div class="topic-desc">type alias có type parameters, specialization và phân biệt alias với defined type trong Go 1.26.4</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">type alias</span><span class="tag">generics</span><span class="level-badge level-adv">nâng cao</span></div>
-<pre><code class="language-go">type Node[T any] struct {
+        <div class="tag-list"><span class="tag">type alias</span><span class="tag">generic alias</span><span class="tag">identity</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">type Result[T any] struct {
+    Data T
+    Err  error
+}
+
+type IntResult = Result[int]
+
+type Node[T any] struct {
     Value T
     Next  *Node[T]
 }
 
-// Type alias đơn giản (không generic) — đã có từ 1.9
-type IntNode = Node[int]
-
-// Generic type alias
 type GenericNode[T any] = Node[T]
 
-// Dùng generic type alias
-var n1 GenericNode[string] = Node[string]{Value: "hello"}
-var n2 IntNode = Node[int]{Value: 42}
-
-// Useful pattern: alias cho generic container
-type Result[T any] struct {
-    Data  T
-    Error error
-}
-type IntResult = Result[int]  // cụ thể hóa
-
-func fetchInt() IntResult {
-    return IntResult{Data: 42, Error: nil}
-}</code></pre>
+var r IntResult = Result[int]{Data: 42}
+var n GenericNode[string] = Node[string]{Value: "hello"}
+fmt.Println(r.Data, n.Value)</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Generic type alias cho phép bạn đặt tên khác cho một generic type hoặc specialize một generic type thành dạng cụ thể hơn. Đây là công cụ tốt cho compatibility layer, migration, hoặc tạo các tên domain-friendly.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Alias không tạo type identity mới. <code>type IntResult = Result[int]</code> vẫn là đúng cái type đó, chỉ có tên khác. Điều này khác với <code>type MyResult[T any] Result[T]</code>, vốn tạo defined type mới.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người kỳ vọng alias sẽ cho method set hay identity riêng như defined type, nhưng không phải. Đây là điểm rất quan trọng khi thiết kế API hoặc refactor thư viện.</div>
+        <div class="note"><strong>Đọc sau:</strong> Generic aliases là phần tương đối mới trong lịch sử generics của Go, và ở Go 1.26.4 bạn có thể xem chúng là tính năng ổn định để dùng thực tế.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">slices, maps, cmp packages</div><div class="topic-desc">stdlib utilities: Sort, BinarySearch, Contains, Compare, Min, Max</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">slices, maps, cmp & idiomatic stdlib</div><div class="topic-desc">stdlib packages sống cùng generics: sort, compare, collect, clone, equal và các pattern tiện dụng</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
         <div class="tag-list"><span class="tag">slices</span><span class="tag">maps</span><span class="tag">cmp</span><span class="level-badge level-inter">trung cấp</span></div>
-<pre><code class="language-go">import (
-    "slices"
-    "maps"
-    "cmp"
-)
+<pre><code class="language-go">scores := map[string]int{
+    "go":  10,
+    "gen": 20,
+    "map": 15,
+}
 
-// slices package
-s := []int{3, 1, 4, 1, 5}
-slices.Sort(s)
-slices.SortFunc(s, func(a, b int) int { return a - b })
-idx, found := slices.BinarySearch(s, 3)
-slices.Contains(s, 4)
-s2 := slices.Clone(s)
-s = slices.Compact(s) // remove consecutive duplicates, phải gán lại
+keys := slices.Sorted(maps.Keys(scores))
+fmt.Println(keys) // [gen go map]
 
-// maps package
-m := map[string]int{"a": 1, "b": 2}
-keys := slices.Collect(maps.Keys(m))   // []string, thứ tự không đảm bảo
-vals := slices.Collect(maps.Values(m)) // []int, thứ tự không đảm bảo
-m2 := maps.Clone(m)
-maps.DeleteFunc(m, func(k string, v int) bool {
-    return v == 0
-})
+clone := maps.Clone(scores)
+fmt.Println(maps.Equal(scores, clone)) // true
 
-// cmp package
-cmp.Compare(1, 2)   // -1, 0, 1
-cmp.Min(3, 5)       // 3
-cmp.Max(3, 5)       // 5
+nums := []int{3, 1, 4, 1, 5}
+slices.Sort(nums)
+nums = slices.Compact(nums) // phải gán lại
+fmt.Println(nums)
 
-// min/max built-in
-x := min(1, 2, 3)  // 1 (built-in, multi-arg)
-y := max(1, 2, 3)  // 3</code></pre>
+fmt.Println(cmp.Compare(10, 20)) // -1
+fmt.Println(cmp.Or("", "fallback"))</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Một phần rất thực tế của generics trong Go là stdlib giờ có thêm nhiều helper mạnh và type-safe qua các package như <code>slices</code>, <code>maps</code>, và <code>cmp</code>. Đây là các API bạn sẽ dùng thường xuyên hơn nhiều so với việc tự viết generics phức tạp.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>maps.Keys</code> trả về iterator và thứ tự không đảm bảo; nếu cần thứ tự ổn định, hãy dùng <code>slices.Sorted</code>. Nhiều hàm của <code>slices</code> như <code>Compact</code>, <code>Delete</code>, <code>Insert</code> trả về slice mới và bạn cần gán lại.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Người mới hay quên rằng map iteration order là không xác định, rồi bất ngờ khi output đổi thứ tự. Một lỗi khác là gọi helper của <code>slices</code> mà quên dùng giá trị trả về.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Trước khi tự viết generic utility mới, hãy kiểm tra xem stdlib đã có thứ bạn cần chưa. Rất nhiều bài toán thường gặp đã được giải quyết sẵn và khá “đúng Go”.</div>
       </div>
     </div>
 

@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Go 1.26.4 — Kỹ thuật nâng cao</title>
+<title>Go 1.26.4 - Kỹ thuật nâng cao</title>
 <link rel="stylesheet" href="style.css">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
 </head>
 <body>
 <div class="container">
 <header style="cursor: pointer;" title="Về trang chủ">
-  <h1>Go 1.26.4 — Tổng hợp từ Cơ bản đến Nâng cao</h1>
+  <h1>Go 1.26.4 - Tổng hợp từ Cơ bản đến Nâng cao</h1>
   <p>Tài liệu tham khảo toàn diện · Phiên bản 1.26.4 · Ra mắt 02/06/2026</p>
   <span class="badge">go.dev/dl/</span>
 </header>
@@ -20,233 +20,318 @@
   <div id="advanced-cards" class="topic-grid">
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Reflection (reflect)</div><div class="topic-desc">reflect.Type, reflect.Value, struct field inspection</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Reflection (reflect)</div><div class="topic-desc">reflect.Type, reflect.Value, CanSet, VisibleFields và khi nào reflection thực sự đáng dùng</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">reflect</span><span class="tag">TypeOf</span><span class="tag">ValueOf</span><span class="level-badge level-adv">nâng cao</span></div>
-<pre><code class="language-go">import "reflect"
+        <div class="tag-list"><span class="tag">reflect</span><span class="tag">CanSet</span><span class="tag">VisibleFields</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">import (
+    "fmt"
+    "reflect"
+)
+
+type User struct {
+    ID   int    `json:"id"`
+    Name string `json:"name"`
+}
 
 func inspect(v any) {
-    t := reflect.TypeOf(v)
-    val := reflect.ValueOf(v)
+    rv := reflect.ValueOf(v)
+    rt := reflect.TypeOf(v)
+    if rt.Kind() == reflect.Pointer {
+        rt = rt.Elem()
+        rv = rv.Elem()
+    }
 
-    fmt.Println(t.Kind())       // struct, int, slice...
-    fmt.Println(t.Name())       // type name
+    fmt.Println(rt.Name(), rt.Kind())
 
-    if t.Kind() == reflect.Struct {
-        for i := 0; i &lt; t.NumField(); i++ {
-            f := t.Field(i)
-            fmt.Printf("%s %s = %v tag=%s\n",
-                f.Name, f.Type,
-                val.Field(i).Interface(),
-                f.Tag.Get("json"))
+    for _, f := range reflect.VisibleFields(rt) {
+        if f.IsExported() {
+            value := rv.FieldByIndex(f.Index)
+            fmt.Printf("%s tag=%q value=%v\n",
+                f.Name, f.Tag.Get("json"), value.Interface())
         }
     }
 }
 
-// Set value via reflection
-func setField(obj any, name string, val any) {
-    v := reflect.ValueOf(obj).Elem()  // deref pointer
-    f := v.FieldByName(name)
-    if f.CanSet() {
-        f.Set(reflect.ValueOf(val))
+func setName(ptr any, name string) error {
+    rv := reflect.ValueOf(ptr)
+    if rv.Kind() != reflect.Pointer || rv.Elem().Kind() != reflect.Struct {
+        return fmt.Errorf("need pointer to struct")
     }
+
+    field := rv.Elem().FieldByName("Name")
+    if !field.IsValid() || !field.CanSet() || field.Kind() != reflect.String {
+        return fmt.Errorf("Name is not settable")
+    }
+    field.SetString(name)
+    return nil
 }</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Reflection cho phép code đọc hoặc thao tác với type và value ở runtime. Nó rất mạnh cho framework, serializer, validator, ORM, DI container, hoặc tooling, nhưng đổi lại là code khó đọc hơn và dễ panic hơn generics hay interface tường minh.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Muốn sửa field qua reflection, value phải addressable và <code>CanSet()</code> phải trả về <code>true</code>. Field không export hoặc value không phải pointer đúng kiểu thường sẽ không set được. <code>VisibleFields</code> hữu ích khi làm việc với embedding và promoted fields.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Gọi <code>Elem()</code> sai ngữ cảnh, <code>FieldByName</code> trên field không tồn tại, hoặc <code>Set</code> trên field không settable đều dễ panic. Một lỗi kiến trúc phổ biến hơn là dùng reflection cho bài toán mà interface, generics, hay code generation giải quyết gọn hơn.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng khi bạn thực sự cần meta-programming ở runtime. Nếu chỉ cần tái sử dụng thuật toán giữa nhiều type, hãy ưu tiên generics trước.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">unsafe & low-level tricks</div><div class="topic-desc">unsafe.Pointer, uintptr, zero-copy conversion</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">unsafe, layout & pointer rules</div><div class="topic-desc">unsafe.Pointer, StringData, Offsetof và các quy tắc không được vi phạm</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">unsafe</span><span class="tag">Pointer</span><span class="tag">uintptr</span><span class="level-badge level-adv">nâng cao</span></div>
-<pre><code class="language-go">import "unsafe"
+        <div class="tag-list"><span class="tag">unsafe</span><span class="tag">Offsetof</span><span class="tag">uintptr</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">import (
+    "fmt"
+    "unsafe"
+)
 
-// String ↔ []byte zero-copy (read-only!)
-func StringToBytes(s string) []byte {
+func ReadOnlyBytes(s string) []byte {
     return unsafe.Slice(unsafe.StringData(s), len(s))
 }
 
-// Struct field offset
-type T struct { A, B, C int }
-var t T
-offsetB := unsafe.Offsetof(t.B)  // bytes từ đầu struct
+type Header struct {
+    Kind byte
+    Len  uint32
+    Flag bool
+}
 
-// Kích thước
-unsafe.Sizeof(t)       // kích thước struct
-unsafe.Alignof(t.B)   // alignment requirement
+var h Header
+fmt.Println("sizeof:", unsafe.Sizeof(h))
+fmt.Println("align Len:", unsafe.Alignof(h.Len))
+fmt.Println("offset Len:", unsafe.Offsetof(h.Len))
 
-// Cảnh báo: unsafe phá vỡ type safety
-// Chỉ dùng khi cần thiết cho performance</code></pre>
-        <div class="note"><strong>Cảnh báo:</strong> <code>unsafe</code> có thể gây crash, race condition, undefined behavior. Chỉ dùng khi đã benchmark và không có cách khác.</div>
+// uintptr chỉ là integer, không phải GC root
+// Không giữ uintptr từ pointer qua nhiều bước rồi mong runtime "nhớ" object</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Package <code>unsafe</code> cho phép đi vòng qua type system để làm những việc rất low-level như kiểm tra layout, zero-copy conversion, hoặc tương tác với ABI/FFI. Đây là vùng tối ưu hóa cực mạnh nhưng cũng là vùng dễ tự bắn vào chân nhất.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Dữ liệu lấy từ <code>unsafe.StringData</code> không được sửa vì string trong Go là immutable. <code>uintptr</code> không giữ object sống cho GC; nó chỉ là số nguyên. Các phép biến đổi qua <code>unsafe.Pointer</code> phải theo đúng pattern được tài liệu Go cho phép.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Người mới hay nhầm “chạy được” với “an toàn”. Nhiều đoạn <code>unsafe</code> có thể chạy ổn hôm nay rồi vỡ ở kiến trúc khác, phiên bản khác, hoặc dưới tải thật. Một lỗi cực nguy hiểm là biến string thành <code>[]byte</code> rồi sửa nội dung như thể đó là bộ nhớ mutable hợp lệ.</div>
+        <div class="note"><strong>Đọc sau:</strong> Chỉ dùng <code>unsafe</code> khi bạn đã profile xong, hiểu memory model, và thật sự không có lựa chọn thuần Go an toàn hơn.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Build tags & conditional compilation</div><div class="topic-desc">//go:build, OS/arch-specific files, toolchain directives</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Build tags & source directives</div><div class="topic-desc">go build constraints, file suffixes, go generate và feature tags như amd64.v2</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">build tags</span><span class="tag">go:build</span><span class="tag">GOOS</span><span class="level-badge level-inter">trung cấp</span></div>
-<pre><code class="language-go">// file: myfile_linux.go (tự động cho Linux)
-// file: myfile_windows.go (tự động cho Windows)
+        <div class="tag-list"><span class="tag">go:build</span><span class="tag">generate</span><span class="tag">GOOS/GOARCH</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">// file: fast_linux_amd64.go
+//go:build linux && amd64.v2
 
-// Mỗi file chỉ có tối đa một //go:build line
+package fastpath
 
-// file: math_linux_amd64.go
-//go:build linux &amp;&amp; amd64
+//go:generate stringer -type=State
 
-// file: purego.go
+// Tên file cũng tạo implicit constraints:
+// parser_windows.go
+// parser_linux.go
+// crypto_amd64.go
+// crypto_arm64.go
+
+// file: parser_purego.go
 //go:build !cgo
 
-// file: go126plus.go
+// file: feature_go126.go
 //go:build go1.26
+
+// file: fast_amd64v2.go
+//go:build amd64.v2
 
 // file: integration_test.go
 //go:build integration
 // go test -tags=integration ./...
 
-// Toolchain directives
-//go:generate go run gen.go
+// file: tools.go
+//go:build ignore
+
+// Source directives khác
 //go:noinline
 //go:nosplit
 //go:linkname localname importpath.name</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Build constraints giúp một package có nhiều implementation khác nhau tùy hệ điều hành, kiến trúc, feature level, hoặc môi trường build. Đây là công cụ chuẩn để viết portable code, optional fast paths, hoặc integration-specific files.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Mỗi file chỉ có tối đa một dòng <code>//go:build</code>, và nó phải ở gần đầu file, trước <code>package</code>, thường kèm một dòng trắng sau đó. Tên file như <code>foo_windows.go</code> hay <code>bar_amd64.go</code> cũng là constraint ngầm. <code>//go:generate</code> không ảnh hưởng chuyện file có được build hay không.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người trộn lẫn build tags với runtime <code>if runtime.GOOS == ...</code>. Nếu hành vi khác nhau ở compile time, hãy tách file thay vì nhồi quá nhiều nhánh vào một file. Ngoài ra, <code>//go:linkname</code> là con dao rất sắc; đừng dùng nếu chưa thật sự hiểu hệ quả.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng khi bạn cần tối ưu theo kiến trúc, hỗ trợ cgo/pure Go song song, hoặc cô lập code chỉ chạy trong test, benchmark, hoặc integration environment.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Testing & table-driven tests</div><div class="topic-desc">testing.T, table-driven, benchmarks, fuzzing, testify</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Testing, benchmarks, fuzzing & synctest</div><div class="topic-desc">table driven tests, b Loop, fuzzing và testing synctest cho code concurrent trong Go 1.26.4</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">testing</span><span class="tag">benchmark</span><span class="tag">table-driven</span><span class="level-badge level-inter">trung cấp</span></div>
-<pre><code class="language-go">func TestAdd(t *testing.T) {
-    tests := []struct {
-        name    string
-        a, b    int
-        want    int
+        <div class="tag-list"><span class="tag">testing</span><span class="tag">fuzz</span><span class="tag">synctest</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">import (
+    "context"
+    "slices"
+    "testing"
+    "testing/synctest"
+    "time"
+)
+
+func TestSplit(t *testing.T) {
+    cases := []struct {
+        name string
+        in   string
+        sep  string
+        want []string
     }{
-        {"positive", 1, 2, 3},
-        {"negative", -1, -2, -3},
-        {"zero", 0, 0, 0},
+        {"comma", "a,b,c", ",", []string{"a", "b", "c"}},
+        {"single", "go", ",", []string{"go"}},
     }
-    for _, tc := range tests {
+
+    for _, tc := range cases {
+        tc := tc
         t.Run(tc.name, func(t *testing.T) {
-            got := Add(tc.a, tc.b)
-            if got != tc.want {
-                t.Errorf("Add(%d,%d)=%d, want %d",
-                    tc.a, tc.b, got, tc.want)
+            got := Split(tc.in, tc.sep)
+            if !slices.Equal(got, tc.want) {
+                t.Fatalf("Split(%q,%q) = %v, want %v",
+                    tc.in, tc.sep, got, tc.want)
             }
         })
     }
 }
 
-// Benchmark
-func BenchmarkAdd(b *testing.B) {
-    for i := 0; i &lt; b.N; i++ {
-        Add(1, 2)
+func BenchmarkSplit(b *testing.B) {
+    b.ReportAllocs()
+    for b.Loop() {
+        Split("a,b,c,d,e", ",")
     }
 }
-// go test -bench=. -benchmem ./...
 
-// Fuzzing
-func FuzzParse(f *testing.F) {
-    f.Add("hello")
-    f.Fuzz(func(t *testing.T, s string) {
-        Parse(s)  // không được panic
+func FuzzParseUser(f *testing.F) {
+    f.Add("alice,42")
+    f.Fuzz(func(t *testing.T, input string) {
+        _, _ = ParseUser(input) // không được panic
     })
-}</code></pre>
+}
+
+func TestTimeout(t *testing.T) {
+    synctest.Test(t, func(t *testing.T) {
+        ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+        defer cancel()
+
+        time.Sleep(5 * time.Second)
+        synctest.Wait()
+
+        if ctx.Err() != context.DeadlineExceeded {
+            t.Fatalf("expected deadline exceeded")
+        }
+    })
+}
+
+// go test -run Split -shuffle=on ./...
+// go test -bench=. -benchmem ./...
+// go test -fuzz=FuzzParseUser ./...</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Testing nâng cao trong Go không chỉ là assert kết quả đúng sai, mà còn gồm benchmark, fuzzing, và kiểm soát hành vi concurrency. Đặc biệt ở Go 1.26.4, <code>testing/synctest</code> là công cụ rất đáng giá để test code concurrent theo thời gian giả lập và bubble cô lập.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Table-driven tests vẫn là xương sống. Với benchmark mới, <code>b.Loop()</code> giúp quản lý timer tự nhiên hơn. Fuzz target phải “không panic” và giữ invariant của parser/decoder. <code>synctest</code> hợp khi bạn cần kiểm tra timeout, cancellation, hoặc scheduling mà không muốn chờ thời gian thật.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Benchmark đo cả setup/cleanup, fuzz test có side effects lên filesystem không kiểm soát, hoặc test concurrency dựa vào <code>time.Sleep</code> ngẫu hứng nên flaky. Ngoài ra, nhiều người quên dùng <code>-shuffle</code> và <code>-benchmem</code> để bắt coupling ẩn và allocation regressions.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng benchmark cho hot path, fuzz cho parser/input boundary, và <code>synctest</code> cho logic concurrent khó tái hiện ổn định bằng clock thật.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">log/slog — Structured Logging</div><div class="topic-desc">Logging có cấu trúc chính thức trong stdlib</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">log/slog & structured logging</div><div class="topic-desc">logger theo key value, JSON handlers, WithGroup và logging có cấu trúc trong stdlib</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">slog</span><span class="tag">structured</span><span class="tag">logging</span><span class="level-badge level-inter">trung cấp</span></div>
-<pre><code class="language-go">import "log/slog"
+        <div class="tag-list"><span class="tag">slog</span><span class="tag">JSONHandler</span><span class="tag">WithGroup</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">import (
+    "context"
+    "log/slog"
+    "os"
+)
 
-// Default logger
-slog.Info("user logged in", "user_id", 123, "ip", "127.0.0.1")
-slog.Error("db error", "err", err)
-
-// JSON handler
 logger := slog.New(slog.NewJSONHandler(os.Stdout, &amp;slog.HandlerOptions{
-    Level: slog.LevelDebug,
+    Level: slog.LevelInfo,
 }))
-logger.Info("request",
-    "method", "GET",
-    "path", "/api/v1/users",
+
+slog.SetDefault(logger)
+
+ctx := context.Background()
+reqLog := logger.With("service", "payments").WithGroup("http")
+
+reqLog.InfoContext(ctx, "request finished",
+    "method", "POST",
+    "path", "/charges",
+    "status", 201,
     "duration_ms", 42,
 )
 
-// Set default logger
-slog.SetDefault(logger)
-
-// Group attributes
-logger.Info("request", slog.Group("http",
-    "method", "POST",
-    "status", 200,
-))</code></pre>
+slog.Error("db error",
+    "err", err,
+    "retryable", true,
+)</code></pre>
+        <div class="note"><strong>Ý chính:</strong> <code>log/slog</code> đưa structured logging vào stdlib, giúp log dễ parse, filter, và đưa vào hệ thống observability hơn kiểu ghép chuỗi bằng <code>fmt.Printf</code>. Đây là hướng mặc định rất ổn cho ứng dụng Go hiện đại.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Hãy dùng key ổn định, machine-friendly như <code>user_id</code>, <code>request_id</code>, <code>duration_ms</code>. <code>With</code> phù hợp cho context lặp lại, còn <code>WithGroup</code> giúp namespace các field liên quan. <code>InfoContext</code> và họ hàng <code>*Context</code> hợp khi logger cần đi cùng request context.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Log quá nhiều object lớn, trộn message format style với key-value style, hoặc dùng key không nhất quán giữa các nơi làm log khó search. Một lỗi nhỏ nhưng khó chịu là truyền số lượng args lẻ, dễ sinh output khó đọc.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng mặc định cho service, CLI, job runner, và app cần tích hợp với JSON logs hoặc log aggregation.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">HTTP Routing (ServeMux)</div><div class="topic-desc">Method-based routing, path parameters, wildcard patterns</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">HTTP routing with ServeMux</div><div class="topic-desc">method aware patterns, PathValue, wildcard segments và rule matching của ServeMux mới</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">http</span><span class="tag">routing</span><span class="tag">ServeMux</span><span class="level-badge level-inter">trung cấp</span></div>
+        <div class="tag-list"><span class="tag">ServeMux</span><span class="tag">PathValue</span><span class="tag">routing</span><span class="level-badge level-inter">trung cấp</span></div>
 <pre><code class="language-go">mux := http.NewServeMux()
 
-// Method + path pattern
-mux.HandleFunc("GET /users", listUsers)
+// Method + path
 mux.HandleFunc("POST /users", createUser)
 mux.HandleFunc("GET /users/{id}", getUser)
-mux.HandleFunc("PUT /users/{id}", updateUser)
-mux.HandleFunc("DELETE /users/{id}", deleteUser)
+// Match đúng root "/"
+mux.HandleFunc("GET /{$}", home)
+// Wildcard phần còn lại
+mux.HandleFunc("GET /static/{path...}", serveStatic)
 
-// Wildcard {id} — truy cập bằng PathValue
+// GET pattern cũng match HEAD
+// Pattern có thể bao gồm cả host: "GET example.com/admin/"
+
 func getUser(w http.ResponseWriter, r *http.Request) {
     id := r.PathValue("id")
-    fmt.Fprintf(w, "User ID: %s", id)
+    fmt.Fprintf(w, "user=%s", id)
 }
-
-// Wildcard {path...} — match phần còn lại
-mux.HandleFunc("GET /static/{path...}", serveStatic)
 
 func serveStatic(w http.ResponseWriter, r *http.Request) {
     path := r.PathValue("path")
     http.ServeFile(w, r, "static/"+path)
 }
 
-http.ListenAndServe(":8080", mux)</code></pre>
-        <div class="note">ServeMux mới có thể thay thế nhiều trường hợp dùng gorilla/mux hay chi mà không cần dependency bên ngoài.</div>
+log.Fatal(http.ListenAndServe(":8080", mux))</code></pre>
+        <div class="note"><strong>Ý chính:</strong> ServeMux hiện đại của Go hỗ trợ pattern theo method, host, wildcard path, và path parameters đủ mạnh cho rất nhiều ứng dụng web thường gặp mà không cần router ngoài.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>Request.PathValue</code> lấy giá trị wildcard đã match. Pattern <code>GET /foo</code> cũng match cả HEAD. <code>/{$}</code> chỉ match đúng root, còn trailing slash hoặc <code>{name...}</code> đại diện subtree. Nếu hai pattern xung đột, việc đăng ký handler có thể panic.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nhầm giữa <code>/</code> và <code>/{$}</code>, hoặc đăng ký pattern chồng chéo rồi ngạc nhiên khi thứ tự đăng ký không “cứu” được xung đột. Ngoài ra, hành vi ServeMux thay đổi đáng kể từ Go 1.22, nên khi đọc code cũ bạn cần nhớ bối cảnh version.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng khi ứng dụng HTTP của bạn không cần middleware/routing quá đặc thù. Đây là lựa chọn ngày càng hợp lý để giảm dependency bề mặt.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">WebAssembly</div><div class="topic-desc">go:wasmexport, reactor/library build mode, WASI</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">WebAssembly & WASI</div><div class="topic-desc">go wasmexport, browser target, wasip1 reactor mode và vài giới hạn thực tế của Go wasm</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">wasm</span><span class="tag">wasmexport</span><span class="tag">wasip1</span><span class="level-badge level-adv">nâng cao</span></div>
-<pre><code class="language-go">//go:wasmexport — export function đến WASM host
-//go:wasmexport add
+        <div class="tag-list"><span class="tag">wasm</span><span class="tag">wasmexport</span><span class="tag">WASI</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">//go:wasmexport add
 func add(a, b int32) int32 {
     return a + b
 }
 
-// Build cho WASM target:
+// Browser / JS host
 // GOOS=js GOARCH=wasm go build -o main.wasm .
 
-// Build WASI reactor:
+// WASI reactor / library style host
 // GOOS=wasip1 GOARCH=wasm go build \
 //   -buildmode=c-shared -o reactor.wasm .
-// Host phải gọi _initialize trước khi dùng exported functions.
+// Yêu cầu đúng một main package
+// Host phải gọi _initialize trước khi dùng exported functions
 
-// Trong JavaScript:
+// JavaScript host example:
 // const go = new Go();
 // WebAssembly.instantiateStreaming(
 //     fetch("main.wasm"), go.importObject
 // ).then(result => { go.run(result.instance); });</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Go có thể build sang WebAssembly cho browser hoặc WASI-style hosts. Đây là cách tái sử dụng code Go ở môi trường ngoài tiến trình native, đặc biệt cho sandboxed execution, edge runtimes, hoặc logic chia sẻ giữa backend và host khác.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>GOOS=js GOARCH=wasm</code> nhắm browser/JS host, còn <code>GOOS=wasip1 GOARCH=wasm</code> phù hợp hơn cho WASI. Với build mode dùng <code>//go:wasmexport</code>, bạn cần đúng một <code>main</code> package và host phải thực hiện khởi tạo đúng cách.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người tưởng mọi package native đều chạy y hệt trong wasm, nhưng host environment và syscall surface rất khác. Một lỗi khác là build được rồi nhưng quên phần bootstrap của host, đặc biệt với WASI reactor cần gọi <code>_initialize</code>.</div>
+        <div class="note"><strong>Đọc sau:</strong> WASM với Go vẫn là vùng nên đo và thử tích hợp sớm, vì giới hạn runtime và host API thường quyết định kiến trúc nhiều hơn bản thân cú pháp Go.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">CGo & FFI</div><div class="topic-desc">Gọi C code từ Go, cgo directives, memory sharing</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">CGo & FFI</div><div class="topic-desc">call C from Go, cgo directives, ownership bộ nhớ và các pointer rules rất dễ sai</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
         <div class="tag-list"><span class="tag">cgo</span><span class="tag">C</span><span class="tag">ffi</span><span class="level-badge level-adv">nâng cao</span></div>
-<pre><code class="language-go">/*
+<pre><code class="language-go">//go:build cgo
+
+/*
+#cgo pkg-config: libpng
 #include &lt;stdio.h&gt;
 #include &lt;stdlib.h&gt;
 
@@ -257,61 +342,76 @@ void sayHello(const char* name) {
 import "C"
 import "unsafe"
 
-func main() {
-    name := C.CString("World")
-    defer C.free(unsafe.Pointer(name))
-    C.sayHello(name)
+func greet(name string) {
+    cName := C.CString(name)
+    defer C.free(unsafe.Pointer(cName))
+    C.sayHello(cName)
 }
 
-// Cgo directives
-// #cgo LDFLAGS: -lm
-// #cgo CFLAGS: -I/usr/local/include
-// #cgo pkg-config: libpng</code></pre>
-        <div class="note"><strong>Lưu ý:</strong> CGo làm chậm build time và phá vỡ cross-compilation đơn giản. Cân nhắc pure Go trước khi dùng CGo.</div>
+// Quy tắc quan trọng:
+// - Bộ nhớ do C.CString cấp phát phải được C.free
+// - Không được đưa Go pointer cho C giữ lại tùy tiện</code></pre>
+        <div class="note"><strong>Ý chính:</strong> CGo là cầu nối giữa Go và C khi bạn cần dùng thư viện native, syscall wrapper đặc thù, hoặc ABI bên ngoài. Đây là lựa chọn thực dụng trong nhiều hệ thống, nhưng nó làm build, deploy, debug, và portability phức tạp hơn hẳn pure Go.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Ownership bộ nhớ phải rất rõ: cái gì do C cấp phát thì phải được C giải phóng đúng chỗ. Truyền con trỏ giữa Go và C phải tuân thủ pointer rules của cgo; đừng giả định rằng “truyền được là an toàn”. CGo thường nên cô lập vào package biên mỏng, không để rò lan khắp codebase.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Quên <code>C.free</code>, để C giữ reference tới Go memory quá lâu, hoặc trộn build environments khiến máy CI/CD thiếu compiler/linker phù hợp. CGo cũng hay phá trải nghiệm cross-compile đơn giản vốn là thế mạnh của Go.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng khi pure Go chưa có lựa chọn chấp nhận được hoặc khi bạn bắt buộc tích hợp thư viện native sẵn có. Nếu không bị ép, pure Go gần như luôn là đường nhẹ đầu hơn.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Profile-Guided Optimization (PGO)</div><div class="topic-desc">Tối ưu dựa trên profile thực tế, cải thiện 2–14% performance</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Profile guided optimization</div><div class="topic-desc">PGO từ workload thật, default pgo auto mode và cách đưa profiling vào vòng tối ưu hiệu năng</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
         <div class="tag-list"><span class="tag">pgo</span><span class="tag">optimization</span><span class="tag">profile</span><span class="level-badge level-adv">nâng cao</span></div>
-<pre><code class="language-go">// Bước 1: Thu thập CPU profile từ workload thật
-// curl http://localhost:6060/debug/pprof/profile?seconds=30 &gt; default.pgo
+<pre><code class="language-go">// Thu thập CPU profile từ workload thật hoặc benchmark đại diện
+// go test -run=^$ -bench=. -cpuprofile=cpu.prof ./...
 
-// Bước 2: Build với PGO
-// go build -pgo=default.pgo .
+// Build với profile cụ thể
+// go build -pgo=cpu.prof ./cmd/api
 
-// Hoặc dùng pprof tự động từ benchmark:
-// go test -bench=. -cpuprofile=cpu.pgo ./...
-// go build -pgo=cpu.pgo .
+// Hoặc dùng cơ chế mặc định của go build
+// mv cpu.prof ./cmd/api/default.pgo
+// go build ./cmd/api   // mặc định là -pgo=auto
 
-// PGO không yêu cầu đổi source code
-// Chất lượng profile quyết định hiệu quả tối ưu</code></pre>
-        <div class="note">PGO là cách hiệu quả nhất để cải thiện performance mà không cần rewrite code. Chỉ cần build lại với profile từ production.</div>
+// Tắt PGO nếu cần so sánh
+// go build -pgo=off ./cmd/api</code></pre>
+        <div class="note"><strong>Ý chính:</strong> PGO cho compiler thêm dữ liệu thật về đường chạy nóng để cải thiện các quyết định tối ưu như inlining và devirtualization. Đây là kiểu tối ưu có ROI rất tốt vì thường không yêu cầu đổi source code.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Chất lượng profile quyết định chất lượng tối ưu. Ở Go 1.26.4, <code>go build</code> mặc định dùng <code>-pgo=auto</code>, nghĩa là nếu có file <code>default.pgo</code> cạnh main package thì nó sẽ tự áp dụng. Luôn so sánh trước và sau bằng benchmark hoặc telemetry thật.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Dùng profile không đại diện cho production, profile quá cũ, hoặc tưởng PGO sẽ cứu mọi bottleneck. Nếu vấn đề nằm ở I/O, DB, lock contention, hay allocation pattern tệ, PGO không phải thuốc thần.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng khi ứng dụng đã khá ổn về thuật toán và bạn muốn bòn thêm hiệu năng từ hot path bằng dữ liệu thật thay vì micro guessing.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Modules & Tool Directive</div><div class="topic-desc">go.mod, tool directive, workspace, vendor</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Modules, tool directive & workspaces</div><div class="topic-desc">go.mod, toolchain, tool declarations, go work và hygiene cho dependency trong dự án thật</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">go.mod</span><span class="tag">tool</span><span class="tag">workspace</span><span class="level-badge level-inter">trung cấp</span></div>
+        <div class="tag-list"><span class="tag">go.mod</span><span class="tag">toolchain</span><span class="tag">go work</span><span class="level-badge level-inter">trung cấp</span></div>
 <pre><code class="language-go">// go.mod
-// module github.com/user/myapp
-// go 1.26
-// require golang.org/x/sync v0.20.0
+// module example.com/myapp
+// go 1.26.0
+// toolchain go1.26.4
+//
+// tool (
+//     golang.org/x/tools/cmd/stringer
+// )
 
-// tool directive — quản lý CLI tools
+// Quản lý CLI tools bằng tool directive
 // go get -tool golang.org/x/tools/cmd/stringer
 // go tool stringer -type=MyEnum .
 
-// go.work — workspace cho nhiều module
-// go work init ./module1 ./module2
+// Workspace cho nhiều module local cùng lúc
+// go work init ./api ./worker
+// go work use ./shared
 
-// Dọn dẹp dependencies
+// Dọn dẹp và kiểm tra dependencies
 // go mod tidy
+// go mod verify
 // go mod vendor
 // go list -m all
 // go mod graph</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Modules là nền tảng quản lý dependency và versioning của Go. Khi dự án lớn dần, <code>toolchain</code>, <code>tool</code> declarations, và <code>go work</code> giúp giữ môi trường phát triển nhất quán và bớt script ma thuật.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Dòng <code>go</code> mô tả version ngôn ngữ hoặc tối thiểu của module, còn <code>toolchain</code> gợi ý toolchain nên dùng. <code>go get -tool</code> thêm tool declaration vào <code>go.mod</code>. <code>go work</code> rất tiện cho monorepo hoặc nhiều module local, nhưng không phải lúc nào cũng nên commit vào mọi repo thư viện.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Để <code>go.mod</code> bẩn vì quên <code>go mod tidy</code>, cài tool ngoài module rồi hy vọng cả team hoặc CI có cùng phiên bản, hoặc dùng <code>go work</code> local khiến code chạy được trên máy mình nhưng không tái hiện trong CI. Một lỗi khác là lẫn lộn vai trò của module dependency với CLI tool dependency.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng <code>tool</code> cho code generators, linters, và CLI cần pin version; dùng <code>go work</code> khi phát triển nhiều module nội bộ cùng lúc; dùng <code>vendor</code> khi môi trường build yêu cầu source dependencies cục bộ.</div>
       </div>
     </div>
 

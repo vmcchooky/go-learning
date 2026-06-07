@@ -20,39 +20,130 @@
   <div id="memory-cards" class="topic-grid">
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Escape analysis & stack/heap</div><div class="topic-desc">Khi nào object dễ lên heap, gcflags=-m, tối ưu</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Escape analysis, stack & heap</div><div class="topic-desc">compiler quyết định object ở stack hay heap, đọc gcflags -m và hiểu escape đúng bản chất</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">escape analysis</span><span class="tag">heap</span><span class="tag">stack</span><span class="level-badge level-adv">nâng cao</span></div>
-<pre><code class="language-go">// Xem escape analysis
+        <div class="tag-list"><span class="tag">escape analysis</span><span class="tag">stack</span><span class="tag">heap</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">// Xem compiler giải thích vì sao value escape
 // go build -gcflags="-m" ./...
 
-// Object thường lên heap khi compiler thấy value "escape":
-// 1. Trả về pointer ra ngoài function
 func newFoo() *Foo {
-    f := Foo{}   // thường escape vì địa chỉ thoát khỏi function
+    f := Foo{} // địa chỉ thoát khỏi function, nên thường lên heap
     return &amp;f
 }
 
-// 2. Boxing vào interface có thể làm value escape
-var i interface{} = Foo{}  // tùy ngữ cảnh, compiler quyết định
+func PrintAny(v any) {
+    fmt.Println(v) // boxing vào interface có thể góp phần làm value escape
+}
 
-// 3. Backing array mà compiler không chứng minh được nằm trên stack
-s := make([]byte, n)       // n không constant thường khiến backing array lên heap
+func makeBuf(n int) []byte {
+    return make([]byte, n) // backing array gần như chắc chắn ở heap
+}
 
-// Tối ưu: dùng stack nếu có thể
 func sum(nums []int) int {
-    // Trả về value, không phải pointer
-    total := 0           // thường ở stack nếu không escape
-    for _, n := range nums { total += n }
+    total := 0 // thường ở stack nếu không escape
+    for _, n := range nums {
+        total += n
+    }
     return total
 }</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Trong Go, bạn không “chọn stack hay heap” bằng cú pháp. Compiler tự quyết định dựa trên escape analysis: nếu một value cần sống lâu hơn frame hiện tại hoặc compiler không chứng minh được nó an toàn trên stack, value đó sẽ escape lên heap.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Trả về pointer, lưu vào interface, tạo closure bắt biến, hoặc cấp phát backing array lớn/dynamic đều có thể khiến value escape. Heap không phải là “sai”; vấn đề chỉ xuất hiện khi allocation và GC pressure thật sự trở thành bottleneck.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người cố viết code kỳ quặc chỉ để ép mọi thứ ở stack. Điều đó thường làm code khó đọc mà lợi ích không đáng kể. Hãy xem output <code>-gcflags=-m</code> như tín hiệu để hiểu compiler, không phải cuộc thi “zero heap allocations” trong mọi nơi.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng escape analysis khi bạn đang điều tra allocation bất ngờ, một benchmark chậm, hoặc nghi ngờ một thay đổi nhỏ làm tăng áp lực GC.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">sync.Pool</div><div class="topic-desc">Object pooling, GC interaction, buffer reuse</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Slices, strings & accidental retention</div><div class="topic-desc">subslice, substring, backing array retention và cách thả reference đúng lúc</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">sync.Pool</span><span class="tag">pooling</span><span class="tag">GC</span><span class="level-badge level-adv">nâng cao</span></div>
+        <div class="tag-list"><span class="tag">slice</span><span class="tag">string</span><span class="tag">retention</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">blob := make([]byte, 10&lt;&lt;20) // 10 MiB
+header := bytes.Clone(blob[:128])
+fmt.Println(len(header)) // chỉ giữ lại 128 bytes thực sự cần
+
+bigText := strings.Repeat("x", 1&lt;&lt;20)
+title := strings.Clone(bigText[:80])
+fmt.Println(len(title))
+
+type Node struct{ ID int }
+
+items := []*Node{{ID: 1}, {ID: 2}, {ID: 3}}
+n := len(items) - 1
+last := items[n]
+items[n] = nil // bỏ reference cũ trước khi reslice
+items = items[:n]
+_ = last
+
+scratch := make([]*Node, 1000)
+clear(scratch) // zero các phần tử, nhưng backing array vẫn còn đó
+scratch = nil  // bỏ luôn slice nếu không còn dùng nữa
+</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Slice và string thường chia sẻ backing storage với giá trị gốc. Nếu bạn chỉ giữ một mẩu nhỏ của dữ liệu lớn bằng subslice hoặc substring, toàn bộ vùng nhớ lớn đó có thể vẫn bị giữ lại trong memory.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Khi thực sự cần giữ lại một phần nhỏ lâu dài, hãy copy ra vùng nhớ mới bằng <code>bytes.Clone</code> hoặc <code>strings.Clone</code>. Khi bỏ phần tử khỏi slice chứa pointer, interface, string, map, hoặc slice khác, nên clear slot cũ nếu backing array còn sống lâu.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người nghĩ <code>s = s[:0]</code> hoặc <code>clear(s)</code> là “trả memory cho OS”. Không hẳn. Chúng chủ yếu giúp tái sử dụng hoặc thả references; backing array vẫn có thể còn được giữ lại cho đến khi không còn ai trỏ tới nó.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng các kỹ thuật này khi xử lý file lớn, request body lớn, log lines dài, hoặc bất kỳ container nào giữ reference đến object nặng.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Preallocation, growth & buffer reuse</div><div class="topic-desc">make với len cap, slices.Grow, strings.Builder và pattern giảm allocations lặp lại</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">preallocation</span><span class="tag">capacity</span><span class="tag">reuse</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">nums := []int{1, 2, 3, 4}
+out := make([]int, 0, len(nums))
+for _, n := range nums {
+    out = append(out, n*n)
+}
+fmt.Println(out)
+
+// Khi biết cần append thêm n phần tử, có thể grow trước
+out = slices.Grow(out[:0], 16)
+
+var b strings.Builder
+b.Grow(64)
+for _, part := range []string{"Go", " ", "memory"} {
+    b.WriteString(part)
+}
+fmt.Println(b.String())
+
+buf := make([]byte, 0, 4096)
+buf = append(buf, "hello"...)
+buf = buf[:0] // reuse scratch buffer nếu vẫn cùng owner</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Nhiều bài toán chậm không phải do thuật toán tệ, mà do tạo quá nhiều allocation nhỏ lặp đi lặp lại. Preallocation và reuse đúng chỗ giúp giảm pressure lên allocator và GC rất hiệu quả.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>make([]T, len)</code> tạo ra slice đã có phần tử, còn <code>make([]T, 0, cap)</code> là mẫu chuẩn khi bạn sẽ <code>append</code>. <code>slices.Grow</code> hữu ích khi biết mình sắp append thêm bao nhiêu phần tử. <code>strings.Builder</code> hợp cho ghép string lặp lại.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Preallocate quá lớn cũng là lãng phí memory. Một lỗi khác là tái sử dụng scratch buffer rồi vô tình trả slice đó ra ngoài, khiến caller giữ luôn backing array nội bộ lâu hơn cần thiết.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng trong hot path như parsing, serialization, xử lý text, xây response, hoặc transform list lớn trong vòng lặp.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">GC tuning, GOGC & GOMEMLIMIT</div><div class="topic-desc">runtime debug knobs, soft memory limit, MemStats và khi nào nên đụng vào tuning</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">GC</span><span class="tag">GOGC</span><span class="tag">GOMEMLIMIT</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">oldGC := debug.SetGCPercent(100) // tương đương GOGC=100
+defer debug.SetGCPercent(oldGC)
+
+oldLimit := debug.SetMemoryLimit(512 &lt;&lt; 20) // soft limit ~512 MiB
+defer debug.SetMemoryLimit(oldLimit)
+
+var m runtime.MemStats
+runtime.ReadMemStats(&amp;m)
+fmt.Printf("heap=%d MiB, objects=%d, nextGC=%d MiB\n",
+    m.HeapAlloc&gt;&gt;20, m.HeapObjects, m.NextGC&gt;&gt;20)
+
+// GOMEMLIMIT cũng có thể cấu hình qua env từ lúc process khởi động
+// GOGC điều khiển tần suất GC tương đối theo live heap</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Go GC mặc định đã khá tốt. <code>GOGC</code> và <code>GOMEMLIMIT</code> là hai núm chính để điều chỉnh trade-off giữa CPU và memory footprint, nhưng chúng chỉ nên đụng tới khi đã đo đạc và hiểu workload.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>GOGC</code> là target tăng trưởng heap tương đối sau mỗi chu kỳ GC; thấp hơn nghĩa là gom rác thường xuyên hơn. <code>GOMEMLIMIT</code> là soft memory limit, runtime sẽ cố tôn trọng bằng cách tăng cường GC và trả memory về hệ điều hành tích cực hơn.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Đặt memory limit quá thấp có thể khiến chương trình gần như chỉ lo chạy GC. Tắt GC hoặc hạ <code>GOGC</code> mù quáng cũng thường phản tác dụng. Đa số vấn đề memory đến từ allocation pattern và object lifetime, không phải do thiếu tuning.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng khi bạn deploy trong container, cần giữ RSS trong ngưỡng nhất định, hoặc đang benchmark để tìm điểm cân bằng CPU và memory.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">sync.Pool</div><div class="topic-desc">object pooling, temporary buffers, GC interaction và những chỗ sync.Pool không phù hợp</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">sync.Pool</span><span class="tag">pooling</span><span class="tag">reuse</span><span class="level-badge level-adv">nâng cao</span></div>
 <pre><code class="language-go">var bufPool = sync.Pool{
     New: func() any {
         return &amp;bytes.Buffer{}
@@ -69,45 +160,101 @@ func encode(data any) ([]byte, error) {
     if err := json.NewEncoder(buf).Encode(data); err != nil {
         return nil, err
     }
-    result := make([]byte, buf.Len())
-    copy(result, buf.Bytes())
-    return result, nil
-}
 
-// Lưu ý: Pool có thể bị GC bỏ bớt giữa các cycle
-// Phù hợp cho: buffers, temporary objects
-// Không dùng như cache bền vững, connection, state quan trọng</code></pre>
+    out := make([]byte, buf.Len())
+    copy(out, buf.Bytes()) // copy ra vùng nhớ riêng trước khi Put lại
+    return out, nil
+}</code></pre>
+        <div class="note"><strong>Ý chính:</strong> <code>sync.Pool</code> giúp tái sử dụng object tạm thời giữa nhiều goroutine để giảm allocation pressure. Nó đặc biệt hợp cho <code>bytes.Buffer</code>, encoder/decoder scratch objects, hoặc temporary structs dùng đi dùng lại.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Item trong pool có thể bị runtime bỏ đi bất cứ lúc nào, nhất là qua các chu kỳ GC. Vì vậy pool không phải cache bền vững. Luôn reset object trước khi <code>Put</code>, và không copy <code>sync.Pool</code> sau khi đã bắt đầu dùng.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Một bug phổ biến là trả object về pool rồi vẫn giữ slice/string trỏ vào bộ nhớ bên trong object đó. Ví dụ trên copy dữ liệu ra <code>out</code> trước khi <code>Put</code> lại buffer chính là để tránh lỗi kiểu này.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng khi profiling cho thấy allocation của object tạm thời lặp lại rất nhiều dưới tải thật. Nếu workload hiếm, object lớn bất thường, hoặc lifecycle gắn với một object ngắn hạn riêng lẻ, pool có thể không đáng dùng.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Profiling & pprof</div><div class="topic-desc">CPU, memory, goroutine profile, flamegraph</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">AddCleanup, finalizers & KeepAlive</div><div class="topic-desc">cleanup APIs hiện đại, safety net cho resource wrappers và vì sao Close vẫn là con đường chính</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">pprof</span><span class="tag">profiling</span><span class="tag">flamegraph</span><span class="level-badge level-adv">nâng cao</span></div>
+        <div class="tag-list"><span class="tag">AddCleanup</span><span class="tag">finalizer</span><span class="tag">KeepAlive</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">type Resource struct {
+    id      int
+    cleanup runtime.Cleanup
+    closed  bool
+}
+
+func release(id int) {
+    fmt.Println("release", id)
+}
+
+func NewResource(id int) *Resource {
+    r := &amp;Resource{id: id}
+    r.cleanup = runtime.AddCleanup(r, release, id)
+    return r
+}
+
+func (r *Resource) Close() {
+    if r.closed {
+        return
+    }
+    r.closed = true
+    r.cleanup.Stop()
+    release(r.id)
+}
+
+func useResource(r *Resource) {
+    fmt.Println("use", r.id)
+    runtime.KeepAlive(r) // giữ r reachable đến hết điểm này nếu cần
+}</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Trong Go hiện đại, <code>runtime.AddCleanup</code> là API an toàn hơn để gắn cleanup logic vào object wrapper. Tuy nhiên cleanup/finalizer chỉ là safety net cho resource không phải memory; đường chính vẫn luôn là explicit <code>Close</code>.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Cleanup không được đảm bảo chạy trước khi process kết thúc, cũng không phải cơ chế quản lý vòng đời chính xác. <code>runtime.SetFinalizer</code> vẫn tồn tại nhưng new code thường nên ưu tiên <code>AddCleanup</code>. Nếu bạn thật sự làm việc ở tầng thấp, <code>runtime.KeepAlive</code> giúp tránh cleanup/finalizer chạy quá sớm.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người dựa vào finalizer để đóng file, flush buffer, hay giải phóng resource quan trọng một cách quyết định. Điều đó rất mong manh. Một bẫy khác là để callback hoặc argument của cleanup giữ ngược lại pointer gốc, khiến object không bao giờ collect được.</div>
+        <div class="note"><strong>Đọc sau:</strong> Đây là vùng kiến thức khá low-level. Bạn chỉ thật sự cần nó khi viết resource wrappers, runtime-adjacent code, cgo bindings, hoặc thư viện quản lý handle đặc biệt.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Profiling, pprof & runtime metrics</div><div class="topic-desc">heap profile, CPU profile, runtime/metrics, MemStats và quy trình đo trước khi tối ưu</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">pprof</span><span class="tag">metrics</span><span class="tag">MemStats</span><span class="level-badge level-adv">nâng cao</span></div>
 <pre><code class="language-go">import (
     "net/http"
-    _ "net/http/pprof"  // đăng ký endpoints
+    "os"
     "runtime"
+    "runtime/metrics"
     "runtime/pprof"
+    _ "net/http/pprof"
 )
 
-// HTTP pprof server
+// Mở HTTP pprof endpoints
 go http.ListenAndServe("localhost:6060", nil)
-
-// CLI profiling
-// go tool pprof http://localhost:6060/debug/pprof/heap
-// go tool pprof http://localhost:6060/debug/pprof/goroutine
-// go tool pprof -http=:8080 cpu.prof
-
-// CPU profile trong code
 f, _ := os.Create("cpu.prof")
-pprof.StartCPUProfile(f)
-defer pprof.StopCPUProfile()
+_ = pprof.StartCPUProfile(f)
+defer func() {
+    pprof.StopCPUProfile()
+    f.Close()
+}()
 
-// Memory profile
+samples := []metrics.Sample{
+    {Name: "/gc/heap/live:bytes"},
+    {Name: "/memory/classes/total:bytes"},
+    {Name: "/memory/classes/heap/released:bytes"},
+}
+metrics.Read(samples)
+for _, sample := range samples {
+    fmt.Println(sample.Name, sample.Value.Uint64())
+}
+
 runtime.GC()
-f2, _ := os.Create("mem.prof")
-pprof.WriteHeapProfile(f2)</code></pre>
+heapFile, _ := os.Create("heap.prof")
+defer heapFile.Close()
+_ = pprof.WriteHeapProfile(heapFile)
+
+// go tool pprof http://localhost:6060/debug/pprof/heap
+// go tool pprof -http=:8080 cpu.prof</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Muốn tối ưu memory đúng cách, bạn phải đo. <code>pprof</code> cho biết allocation và retention đang xảy ra ở đâu, còn <code>runtime/metrics</code> và <code>runtime.ReadMemStats</code> hữu ích cho telemetry, dashboards, và quick inspection trong runtime.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Heap profile là ảnh chụp gắn với chu kỳ GC gần nhất, còn <code>ReadMemStats</code> cập nhật số liệu đến thời điểm gọi. <code>runtime/metrics</code> phù hợp khi bạn cần lấy một vài counters cụ thể với API ổn định hơn cho quan sát lâu dài.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Tối ưu trước khi profile thường dẫn tới sửa sai chỗ. Một lỗi khác là chỉ nhìn tổng RSS rồi kết luận có leak, trong khi thực tế có thể là transient spike, idle heap chưa trả hết, hoặc object lifetime dài hơn dự kiến chứ không phải “leak thật”.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng khi chương trình tăng RAM bất thường, GC CPU cao, latency spike dưới tải, hoặc bạn cần chứng minh một tối ưu memory có thật sự hiệu quả không.</div>
       </div>
     </div>
 
