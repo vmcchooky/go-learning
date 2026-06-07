@@ -20,93 +20,226 @@
   <div id="structs-cards" class="topic-grid">
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Struct embedding</div><div class="topic-desc">Composition, promoted methods, anonymous fields, struct tags</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Khai báo struct, field & zero value</div><div class="topic-desc">struct là value type, nhóm field liên quan, exported names và zero value của từng field</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">embedding</span><span class="tag">composition</span><span class="tag">promoted methods</span><span class="level-badge level-inter">trung cấp</span></div>
-<pre><code class="language-go">type Animal struct { Name string }
-func (a Animal) Speak() string { return a.Name + " speaks" }
-
-type Dog struct {
-    Animal           // anonymous field (embedded)
-    Breed string
+        <div class="tag-list"><span class="tag">struct</span><span class="tag">fields</span><span class="tag">zero value</span><span class="tag">naming</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">type User struct {
+    Name   string
+    Age    int
+    Active bool
 }
 
-d := Dog{Animal: Animal{"Rex"}, Breed: "Lab"}
-d.Speak()     // promoted: d.Animal.Speak()
-d.Name        // promoted field: d.Animal.Name
+var u User
+fmt.Println(u.Name, u.Age, u.Active) // "" 0 false
 
-// Embedding interface
-type ReadWriter interface {
-    io.Reader     // embed interface
-    io.Writer
+type Config struct {
+    Host string
+    Port int
 }
 
-// Struct tags
-type User struct {
-    Name  string `json:"name" db:"user_name"`
-    Email string `json:"email,omitempty"`
-    Age   int    `json:"-"`  // bỏ qua khi encode
-}</code></pre>
+cfg := Config{Host: "localhost", Port: 8080}
+fmt.Println(cfg)</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Struct là cách Go nhóm nhiều field có liên quan vào cùng một kiểu dữ liệu. Đây là nền tảng để mô hình hóa entity, config, request, response, và state trong hầu hết chương trình Go.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Struct là value type. Mỗi field có zero value riêng của nó. Tên field bắt đầu bằng chữ hoa là exported để package khác hoặc các package như <code>encoding/json</code> có thể truy cập.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người mới quen OOP hay tìm constructor bắt buộc hoặc inheritance, nhưng Go không có class và cũng không có inheritance theo kiểu truyền thống.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng struct khi dữ liệu có nhiều thuộc tính đi cùng nhau và cần một tên kiểu rõ ràng thay vì truyền nhiều biến rời rạc.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Interface & implicit implementation</div><div class="topic-desc">Duck typing, nil interface, interface composition</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Composite literals, copy & pointers</div><div class="topic-desc">keyed literals, positional literals, struct copy, so sánh bằng và con trỏ tới struct</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">interface</span><span class="tag">duck typing</span><span class="tag">nil interface</span><span class="level-badge level-inter">trung cấp</span></div>
+        <div class="tag-list"><span class="tag">literal</span><span class="tag">copy</span><span class="tag">pointer</span><span class="tag">comparable</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">type Point struct {
+    X int
+    Y int
+}
+
+type Profile struct {
+    Name string
+    Age  int
+}
+
+a := Point{1, 2}            // positional literal
+b := Point{Y: 2, X: 1}      // keyed literal
+fmt.Println(a == b)         // true nếu mọi field đều comparable
+
+u1 := Profile{Name: "An", Age: 20}
+u2 := u1                    // copy toàn bộ struct
+u2.Age = 21
+fmt.Println(u1.Age, u2.Age) // 20 21
+
+p := &Profile{Name: "Binh"}
+p.Age = 30                  // shorthand cho (*p).Age = 30
+fmt.Println(p.Name, p.Age)</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Gán một struct sang biến khác sẽ copy toàn bộ giá trị của struct đó. Con trỏ tới struct giúp nhiều nơi cùng thao tác trên cùng một instance hoặc tránh copy struct lớn.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Ngoài phạm vi rất nhỏ, keyed literal như <code>Profile{Name: "An"}</code> thường dễ đọc và an toàn hơn positional literal. Struct chỉ so sánh được bằng <code>==</code> nếu tất cả field bên trong đều comparable.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Người mới hay sửa bản copy rồi tưởng bản gốc thay đổi. Ngoài ra, positional literal dễ gãy khi thứ tự field đổi hoặc khi struct có nhiều field cùng kiểu.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng pointer khi cần mutate shared state hoặc struct lớn. Dùng value khi muốn bản sao độc lập, rõ ownership, hoặc struct nhỏ gọn.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Methods, constructor pattern & zero-value design</div><div class="topic-desc">gắn hành vi vào struct, NewX pattern, pointer receiver và thiết kế zero value dùng được</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">methods</span><span class="tag">constructor</span><span class="tag">receiver</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">type Counter struct {
+    n int
+}
+
+func NewCounter(start int) *Counter {
+    return &Counter{n: start}
+}
+
+func (c *Counter) Inc() {
+    c.n++
+}
+
+func (c Counter) Value() int {
+    return c.n
+}
+
+c := NewCounter(10)
+c.Inc()
+fmt.Println(c.Value()) // 11</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Trong Go, “hành vi” của struct được gắn bằng method chứ không phải class. Nếu cần khởi tạo có logic hoặc muốn ẩn bớt chi tiết, idiom phổ biến là viết hàm kiểu <code>NewX</code>.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Không phải struct nào cũng cần constructor. Rất nhiều type trong Go được thiết kế để zero value đã dùng được. Pointer receiver hợp khi cần mutate hoặc tránh copy lớn.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Dùng lẫn lộn value receiver và pointer receiver mà không có chủ ý sẽ làm API khó đoán hơn, nhất là khi type cần implement interface.</div>
+        <div class="note"><strong>Đọc sau:</strong> Phần method set, method value và method expression đã có một card sâu hơn trong module <code>funcs</code>. Ở đây mục tiêu là hiểu cách struct mang hành vi.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Struct embedding, composition & tags</div><div class="topic-desc">anonymous fields, promoted fields, composition thay cho inheritance, interface embedding và struct tags</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">embedding</span><span class="tag">composition</span><span class="tag">tags</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">type Animal struct{ Name string }
+
+func (a Animal) Speak() string {
+    return a.Name + " speaks"
+}
+
+type Dog struct {
+    Animal
+    Breed string
+}
+
+d := Dog{
+    Animal: Animal{Name: "Rex"},
+    Breed:  "Lab",
+}
+fmt.Println(d.Name)    // promoted field
+fmt.Println(d.Speak()) // promoted method
+
+type ReadWriter interface {
+    io.Reader
+    io.Writer
+}
+
+type UserDTO struct {
+    Name  string `json:"name"`
+    Email string `json:"email,omitempty"`
+    Age   int    `json:"-"`
+}</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Go ưu tiên composition hơn inheritance. Embedding cho phép một struct “mang theo” field và method của type khác theo cách đơn giản, rõ ràng hơn mô hình kế thừa nhiều tầng.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Promoted field/method chỉ là cú pháp thuận tiện; bản chất vẫn là truy cập qua field được embed. Struct tag chỉ là metadata dạng chuỗi, có ý nghĩa khi package khác như <code>encoding/json</code> hoặc ORM đọc chúng bằng reflection.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Embedding không phải inheritance. Nếu embed nhiều type có field hay method cùng tên, bạn có thể gặp ambiguous selector và phải gọi tường minh qua type bên trong.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng embedding khi muốn tái sử dụng hành vi nhỏ gọn hoặc ghép capability. Dùng struct tag khi cần mô tả cách serialize, validate, map DB, hoặc đọc metadata.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Interfaces & implicit implementation</div><div class="topic-desc">small interfaces, duck typing, interface composition và nguyên tắc “accept interfaces, return concrete types”</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">interface</span><span class="tag">implicit</span><span class="tag">composition</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">type Reader interface {
+    Read(p []byte) (int, error)
+}
+
+type Closer interface {
+    Close() error
+}
+
+type ReadCloser interface {
+    Reader
+    Closer
+}
+
+type File struct{}
+
+func (File) Read(p []byte) (int, error) { return 0, io.EOF }
+func (File) Close() error               { return nil }
+
+var rc ReadCloser = File{} // implement tự động, không cần từ khóa implements</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Interface trong Go mô tả hành vi chứ không mô tả quan hệ kế thừa. Một type chỉ cần có đủ method là tự động implement interface đó.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Interface nhỏ thường tốt hơn interface lớn. Một guideline phổ biến là “accept interfaces, return concrete types”: nhận dependency dưới dạng interface nhưng trả concrete type khi hợp lý để API vẫn giàu khả năng dùng.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Người mới hay định nghĩa interface quá sớm hoặc quá to ở nơi consumer không cần. Trong Go, interface thường nên được đặt gần nơi sử dụng hơn là nơi implement.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng interface khi cần thay thế implementation, mock trong test, hoặc mô tả capability như đọc, ghi, log, cache, notify.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Nil interface, typed nil & comparison traps</div><div class="topic-desc">nil interface vs interface chứa nil pointer, so sánh interface và các bẫy runtime phổ biến</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">nil interface</span><span class="tag">typed nil</span><span class="tag">comparison</span><span class="level-badge level-inter">trung cấp</span></div>
 <pre><code class="language-go">type Stringer interface {
     String() string
 }
 
-type Person struct { Name, Email string }
-func (p Person) String() string {
-    return p.Name + " &lt;" + p.Email + "&gt;"
+type Person struct{ Name string }
+
+func (p *Person) String() string {
+    return p.Name
 }
-// Person tự động implement Stringer (không cần khai báo)
 
-// Nil interface vs nil pointer trong interface
-var s Stringer           // nil: (type=nil, value=nil)
-var p *Person            // nil pointer
-var s2 Stringer = p     // NOT nil! (type=*Person, value=nil)
-s2 != nil               // true — BẪY PHỔ BIẾN!
+var p *Person = nil
+var s Stringer = p
 
-// Interface comparison
-var a, b Stringer
-a == b // so sánh cả type và value</code></pre>
-        <div class="note"><strong>Bẫy:</strong> Một interface chứa non-nil pointer sẽ KHÔNG bằng nil dù pointer đó là nil. Luôn kiểm tra error bằng <code>err != nil</code> chứ không phải <code>err == nil</code> sau khi assign.</div>
+fmt.Println(p == nil) // true
+fmt.Println(s == nil) // false
+
+var x any = []int{1}
+var y any = []int{1}
+// fmt.Println(x == y) // panic: dynamic value []int không comparable</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Một interface value gồm hai phần logic: dynamic type và dynamic value. Chỉ khi cả hai cùng nil thì interface mới thực sự bằng nil.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>var s Stringer = p</code> với <code>p</code> là nil pointer vẫn tạo ra interface non-nil vì nó đã mang type <code>*Person</code>. Khi so sánh hai interface, nếu dynamic value bên trong không comparable như slice hoặc map, phép so sánh có thể panic ở runtime.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Đây là một trong các bẫy nổi tiếng nhất của Go. Nó thường xuất hiện ở custom error type, logger, hoặc wrapper type trả về interface.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Hiểu phần này đặc biệt quan trọng khi thiết kế API trả về <code>error</code>, <code>fmt.Stringer</code>, hoặc các interface custom khác.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Generics với constraints</div><div class="topic-desc">Type parameters, generic structs, type inference</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Generic structs & container patterns</div><div class="topic-desc">generic struct, comparable constraints và các container kiểu Stack / Set</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">generics</span><span class="tag">type parameters</span><span class="tag">constraints</span><span class="level-badge level-adv">nâng cao</span></div>
-<pre><code class="language-go">// Generic function
-func Map[T, U any](s []T, fn func(T) U) []U {
-    result := make([]U, len(s))
-    for i, v := range s { result[i] = fn(v) }
-    return result
+        <div class="tag-list"><span class="tag">generic struct</span><span class="tag">constraints</span><span class="tag">container</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">type Stack[T any] struct {
+    items []T
 }
 
-// Type inference
-nums := Map([]int{1,2,3}, func(n int) string {
-    return fmt.Sprint(n)
-})
+func (s *Stack[T]) Push(v T) {
+    s.items = append(s.items, v)
+}
 
-// Generic struct
-type Stack[T any] struct { items []T }
-func (s *Stack[T]) Push(v T) { s.items = append(s.items, v) }
 func (s *Stack[T]) Pop() (T, bool) {
-    if len(s.items) == 0 { var zero T; return zero, false }
+    if len(s.items) == 0 {
+        var zero T
+        return zero, false
+    }
     n := len(s.items) - 1
     v := s.items[n]
     s.items = s.items[:n]
     return v, true
 }
 
-var s Stack[int]
-s.Push(1); s.Push(2)
-v, _ := s.Pop() // v = 2</code></pre>
+type Set[T comparable] map[T]struct{}
+
+func (s Set[T]) Add(v T) {
+    s[v] = struct{}{}
+}</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Generic struct giúp bạn viết một kiểu container hay helper dùng lại cho nhiều loại dữ liệu mà vẫn giữ type safety. Đây là nơi generics rất tự nhiên và có lợi thực sự.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Nếu type parameter sẽ làm key của map hoặc cần so sánh bằng <code>==</code>, constraint thường phải là <code>comparable</code>. <code>struct{}</code> thường được dùng làm value của set vì nó chiếm zero bytes về mặt ngữ nghĩa lưu trữ.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Không phải mọi struct đều nên generic hóa. Với domain model cụ thể như <code>User</code>, <code>Order</code>, hay <code>Invoice</code>, generic thường chỉ làm API khó đọc hơn.</div>
+        <div class="note"><strong>Đọc sau:</strong> Nếu cần đi sâu vào type parameters, inference, union constraints hay generic aliases, xem thêm module <code>generics</code> và một phần của <code>types</code>, <code>funcs</code>.</div>
       </div>
     </div>
 
