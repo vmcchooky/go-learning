@@ -189,6 +189,9 @@ var rc ReadCloser = File{} // implement tự động, không cần từ khóa im
 type Person struct{ Name string }
 
 func (p *Person) String() string {
+    if p == nil {
+        return "<nil>"
+    }
     return p.Name
 }
 
@@ -227,6 +230,8 @@ func (s *Stack[T]) Pop() (T, bool) {
     }
     n := len(s.items) - 1
     v := s.items[n]
+    var zero T
+    s.items[n] = zero // dọn đường cho GC thu gom (chống memory leak)
     s.items = s.items[:n]
     return v, true
 }
@@ -237,7 +242,7 @@ func (s Set[T]) Add(v T) {
     s[v] = struct{}{}
 }</code></pre>
         <div class="note"><strong>Ý chính:</strong> Generic struct giúp bạn viết một kiểu container hay helper dùng lại cho nhiều loại dữ liệu mà vẫn giữ type safety. Đây là nơi generics rất tự nhiên và có lợi thực sự.</div>
-        <div class="note"><strong>Quy tắc cần nhớ:</strong> Nếu type parameter sẽ làm key của map hoặc cần so sánh bằng <code>==</code>, constraint thường phải là <code>comparable</code>. <code>struct{}</code> thường được dùng làm value của set vì nó chiếm zero bytes về mặt ngữ nghĩa lưu trữ.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Nếu type parameter sẽ làm key của map hoặc cần so sánh bằng <code>==</code>, constraint thường phải là <code>comparable</code>. <code>struct{}</code> thường được dùng làm value của set vì nó chiếm zero bytes về mặt ngữ nghĩa lưu trữ. Lưu ý: Khác với Stack an toàn với zero-value, Set bọc map nên bắt buộc phải khởi tạo bằng <code>make(Set[T])</code> trước khi Add.</div>
         <div class="note"><strong>Lỗi hay gặp:</strong> Không phải mọi struct đều nên generic hóa. Với domain model cụ thể như <code>User</code>, <code>Order</code>, hay <code>Invoice</code>, generic thường chỉ làm API khó đọc hơn.</div>
         <div class="note"><strong>Đọc sau:</strong> Nếu cần đi sâu vào type parameters, inference, union constraints hay generic aliases, xem thêm module <code>generics</code> và một phần của <code>types</code>, <code>funcs</code>.</div>
       </div>

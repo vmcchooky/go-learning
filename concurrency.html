@@ -20,82 +20,165 @@
   <div id="concurrency-cards" class="topic-grid">
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Goroutines & WaitGroup</div><div class="topic-desc">go keyword, sync.WaitGroup, goroutine leak prevention</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Goroutines, scheduling & WaitGroup</div><div class="topic-desc">go keyword, lightweight concurrency, sync.WaitGroup và vòng đời của goroutine</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">goroutine</span><span class="tag">WaitGroup</span><span class="tag">concurrent</span><span class="level-badge level-inter">trung cấp</span></div>
+        <div class="tag-list"><span class="tag">goroutine</span><span class="tag">WaitGroup</span><span class="tag">lifecycle</span><span class="level-badge level-inter">trung cấp</span></div>
 <pre><code class="language-go">var wg sync.WaitGroup
 
-for i := range 5 {
-    id := i
+for i := range 3 {
     wg.Go(func() {
-        fmt.Printf("worker %d done\n", id)
+        fmt.Println("worker", i)
     })
 }
 wg.Wait()
 
-// Goroutine leak — BAD
-func leak() {
-    ch := make(chan int)
-    go func() { ch &lt;- 1 }() // block mãi nếu không đọc
-}
-
-// Goroutine leak — GOOD: dùng context
-func good(ctx context.Context) {
-    ch := make(chan int, 1)
+func consume(ctx context.Context, jobs &lt;-chan int) {
     go func() {
-        select {
-        case ch &lt;- 1:
-        case &lt;-ctx.Done():
+        for {
+            select {
+            case job, ok := &lt;-jobs:
+                if !ok {
+                    return
+                }
+                fmt.Println("job:", job)
+            case &lt;-ctx.Done():
+                return
+            }
         }
     }()
 }</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Goroutine là đơn vị concurrency rất nhẹ do runtime Go quản lý. Bạn tạo goroutine bằng từ khóa <code>go</code>, còn <code>WaitGroup</code> giúp chờ một nhóm công việc kết thúc.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Concurrency không đồng nghĩa với parallelism. <code>WaitGroup</code> chỉ chờ, nó không hủy goroutine và cũng không gom lỗi. Mỗi goroutine nên có đường thoát rõ ràng như <code>close(channel)</code> hoặc <code>ctx.Done()</code>.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Goroutine rất rẻ nhưng không miễn phí. Nếu goroutine bị kẹt mãi ở send, receive, sleep loop, hay I/O mà không có cơ chế dừng, bạn sẽ tạo goroutine leak.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng goroutine cho các tác vụ độc lập, I/O bound, background work, hoặc chia nhỏ việc cần chạy đồng thời.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Channel patterns</div><div class="topic-desc">Pipeline, fan-out/fan-in, done channel, select</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Channels, select & closing rules</div><div class="topic-desc">send/receive, buffered vs unbuffered, select, close rules và nil channel</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">pipeline</span><span class="tag">fan-out</span><span class="tag">select</span><span class="level-badge level-adv">nâng cao</span></div>
-<pre><code class="language-go">// Pipeline pattern
-func gen(nums ...int) &lt;-chan int {
-    out := make(chan int)
-    go func() {
-        defer close(out)
-        for _, n := range nums { out &lt;- n }
-    }()
-    return out
+        <div class="tag-list"><span class="tag">channel</span><span class="tag">select</span><span class="tag">close</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">jobs := make(chan int, 2)
+jobs &lt;- 1
+jobs &lt;- 2
+close(jobs)
+
+for job := range jobs {
+    fmt.Println(job)
 }
 
-func sq(in &lt;-chan int) &lt;-chan int {
-    out := make(chan int)
-    go func() {
-        defer close(out)
-        for n := range in { out &lt;- n * n }
-    }()
-    return out
-}
+v, ok := &lt;-jobs
+fmt.Println(v, ok) // 0 false
 
-// Select với timeout
+// Select với timeout: block cho đến khi có case sẵn sàng
 select {
-case v := &lt;-ch1:
-    fmt.Println("from ch1:", v)
-case ch2 &lt;- 42:
-    fmt.Println("sent to ch2")
-case &lt;-time.After(1 * time.Second):
+case msg := &lt;-ch1:
+    fmt.Println("received:", msg)
+case ch2 &lt;- "ping":
+    fmt.Println("sent ping")
+case &lt;-time.After(500 * time.Millisecond):
     fmt.Println("timeout")
-case &lt;-ctx.Done():
-    return
+}
+
+// Non-blocking select: dùng default khi muốn kiểm tra nhanh
+select {
+case msg := &lt;-ch1:
+    fmt.Println("received immediately:", msg)
+default:
+    fmt.Println("no channel ready")
 }</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Channel là cách Go đồng bộ và truyền dữ liệu giữa goroutines. <code>select</code> cho phép chờ nhiều thao tác channel cùng lúc.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Thông thường bên gửi là bên đóng channel. Receive từ channel đã đóng sẽ trả về zero value cùng <code>ok = false</code>. Send vào channel đã đóng sẽ panic. Nil channel sẽ block mãi.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người trộn <code>default</code> với <code>time.After</code> trong cùng một <code>select</code> rồi tưởng rằng đang chờ timeout, nhưng <code>default</code> sẽ làm <code>select</code> trở thành non-blocking. Ngoài ra, đóng channel từ phía receiver thường là dấu hiệu thiết kế chưa ổn.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng channel khi bạn cần giao tiếp hoặc đồng bộ hóa giữa goroutines. Nếu chỉ cần bảo vệ shared state đơn giản, <code>Mutex</code> thường thẳng và dễ hiểu hơn.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Mutex, RWMutex & sync primitives</div><div class="topic-desc">sync.Mutex, sync.RWMutex, sync.Once, sync.Map</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Pipelines, fan-out/fan-in & cancellation</div><div class="topic-desc">pipeline stages, close propagation, early stop và tránh leak bằng context</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">Mutex</span><span class="tag">RWMutex</span><span class="tag">sync.Once</span><span class="tag">sync.Map</span><span class="level-badge level-inter">trung cấp</span></div>
+        <div class="tag-list"><span class="tag">pipeline</span><span class="tag">fan-out</span><span class="tag">fan-in</span><span class="tag">cancellation</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">func gen(ctx context.Context, nums ...int) &lt;-chan int {
+    out := make(chan int)
+    go func() {
+        defer close(out)
+        for _, n := range nums {
+            select {
+            case out &lt;- n:
+            case &lt;-ctx.Done():
+                return
+            }
+        }
+    }()
+    return out
+}
+
+func sq(ctx context.Context, in &lt;-chan int) &lt;-chan int {
+    out := make(chan int)
+    go func() {
+        defer close(out)
+        for n := range in {
+            select {
+            case out &lt;- n * n:
+            case &lt;-ctx.Done():
+                return
+            }
+        }
+    }()
+    return out
+}</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Pipeline chia xử lý thành nhiều stage nối với nhau bằng channel. Fan-out cho nhiều worker cùng xử lý một input stream, còn fan-in gộp nhiều output stream về một nơi.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Mỗi stage thường đóng channel đầu ra của chính nó, không đóng channel đầu vào của stage khác. Nếu consumer có thể dừng sớm, nên có cơ chế cancellation để upstream không bị kẹt lúc gửi tiếp dữ liệu.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Pipeline rất dễ sinh goroutine leak nếu một stage phía sau đọc chưa hết nhưng phía trước vẫn cố gửi tiếp. Đây là lý do <code>context</code> hoặc done channel thường đi kèm pattern này.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng cho các luồng xử lý nhiều bước như parse - transform - validate - save, hoặc khi muốn tách rõ từng stage đồng thời.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Worker pool & bounded concurrency</div><div class="topic-desc">jobs/results channels, fixed workers, backpressure và giới hạn số tác vụ chạy song song</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">worker pool</span><span class="tag">bounded</span><span class="tag">backpressure</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">type Job struct{ ID int }
+type Result struct {
+    JobID int
+    Value int
+}
+
+func worker(jobs &lt;-chan Job, results chan&lt;- Result, wg *sync.WaitGroup) {
+    defer wg.Done()
+    for job := range jobs {
+        results &lt;- Result{JobID: job.ID, Value: job.ID * job.ID}
+    }
+}
+
+jobs := make(chan Job, 100)
+results := make(chan Result, 100)
+var wg sync.WaitGroup
+
+for range 3 {
+    wg.Add(1)
+    go worker(jobs, results, &amp;wg)
+}</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Worker pool là pattern rất phổ biến để giới hạn số goroutine chạy đồng thời. Thay vì spawn vô hạn goroutine, bạn giữ một số worker cố định và đẩy việc qua channel.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Worker pool tạo bounded concurrency, giúp tránh quá tải CPU, DB, disk, network, hoặc API ngoài. Buffered channel thường đóng vai trò queue và cũng tạo backpressure khi queue đầy.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Quên đóng <code>jobs</code> hoặc quên đóng <code>results</code> sau khi worker xong sẽ làm consumer bị treo. Spawn quá nhiều worker cũng không giúp nhanh hơn nếu bottleneck nằm ở tài nguyên ngoài.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng khi có nhiều job giống nhau cần xử lý song song nhưng bạn muốn khống chế mức độ song song.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Mutex, RWMutex, Once & race detector</div><div class="topic-desc">shared state, map safety, sync.Once, chọn primitive phù hợp và phát hiện data race</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">Mutex</span><span class="tag">RWMutex</span><span class="tag">sync.Once</span><span class="tag">race</span><span class="level-badge level-inter">trung cấp</span></div>
 <pre><code class="language-go">type SafeCounter struct {
     mu sync.RWMutex
     v  map[string]int
+}
+
+func NewSafeCounter() *SafeCounter {
+    return &SafeCounter{
+        v: make(map[string]int),
+    }
 }
 
 func (c *SafeCounter) Inc(key string) {
@@ -105,141 +188,119 @@ func (c *SafeCounter) Inc(key string) {
 }
 
 func (c *SafeCounter) Value(key string) int {
-    c.mu.RLock()   // nhiều reader đồng thời
+    c.mu.RLock()
     defer c.mu.RUnlock()
     return c.v[key]
 }
 
-// sync.Once — khởi tạo một lần (singleton)
-var (
-    once     sync.Once
-    instance *DB
-)
-func GetDB() *DB {
-    once.Do(func() { instance = newDB() })
-    return instance
+c := NewSafeCounter()
+c.Inc("go")
+fmt.Println(c.Value("go")) // 1
+
+var once sync.Once
+
+func initDB() {
+    fmt.Println("initialize once")
 }
 
-// sync.Map — concurrent safe map
-var sm sync.Map
-sm.Store("key", 42)
-v, ok := sm.Load("key")</code></pre>
+func GetDB() {
+    once.Do(initDB)
+}
+
+// go test -race ./...</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Khi nhiều goroutine cùng truy cập shared memory, bạn cần primitive đồng bộ như <code>Mutex</code> hoặc <code>RWMutex</code>. <code>sync.Once</code> giúp một đoạn init chỉ chạy đúng một lần.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Map thường không thread-safe cho concurrent read/write. <code>RWMutex</code> chỉ hữu ích khi số reader nhiều hơn write đáng kể. Không copy value chứa mutex sau khi nó đã bắt đầu được dùng. Với wrapper như <code>SafeCounter</code>, bạn cũng phải khởi tạo map bên trong trước khi ghi.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều bug concurrency không lộ ngay mà chỉ xuất hiện khi tải cao. Hãy chạy <code>go test -race</code> hoặc <code>go run -race</code> khi nghi có data race. <code>sync.Map</code> không phải thay thế mặc định cho mọi map thường.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng mutex khi nhiều goroutine cần sửa cùng một state trong memory. Đây thường là lựa chọn đơn giản và đúng hơn so với cố “channel hóa” mọi thứ.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Context</div><div class="topic-desc">context.WithCancel, WithTimeout, WithValue, cancellation</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Context</div><div class="topic-desc">cancellation, deadlines, request-scoped values và propagation qua nhiều goroutine</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
         <div class="tag-list"><span class="tag">context</span><span class="tag">cancellation</span><span class="tag">deadline</span><span class="level-badge level-inter">trung cấp</span></div>
-<pre><code class="language-go">// WithCancel
-baseCtx := context.Background()
-ctx, cancel := context.WithCancel(baseCtx)
+<pre><code class="language-go">base := context.Background()
+ctx, cancel := context.WithTimeout(base, 5*time.Second)
 defer cancel()
 
-// WithTimeout
-timeoutCtx, cancelTimeout := context.WithTimeout(ctx, 5*time.Second)
-defer cancelTimeout()
-
-// WithValue — key nên là unexported custom type
 type ctxKey struct{}
-timeoutCtx = context.WithValue(timeoutCtx, ctxKey{}, "user-123")
-val := timeoutCtx.Value(ctxKey{})
+ctx = context.WithValue(ctx, ctxKey{}, "user-123")
 
-// Sử dụng context trong function
-func fetchData(ctx context.Context) (Data, error) {
+func fetchData(ctx context.Context, url string) ([]byte, error) {
     req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
     resp, err := http.DefaultClient.Do(req)
-    if errors.Is(err, context.DeadlineExceeded) {
-        return Data{}, fmt.Errorf("timeout: %w", err)
+    if err != nil {
+        if errors.Is(err, context.DeadlineExceeded) {
+            return nil, fmt.Errorf("timeout: %w", err)
+        }
+        return nil, err
     }
-    return parseData(resp)
+    defer resp.Body.Close()
+    return io.ReadAll(resp.Body)
 }</code></pre>
-        <div class="note"><strong>Best practice:</strong> Context phải là tham số đầu tiên, tên <code>ctx</code>. Không lưu context trong struct. Luôn gọi <code>cancel()</code> để tránh context leak.</div>
+        <div class="note"><strong>Ý chính:</strong> <code>context</code> mang tín hiệu hủy, deadline, và metadata theo request xuyên qua nhiều hàm và goroutine. Đây là primitive rất quan trọng trong code server, CLI, background jobs, và network I/O.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Context nên là tham số đầu tiên, tên <code>ctx</code>. Không lưu context trong struct. Luôn gọi <code>cancel()</code> nếu API trả về hàm cancel. <code>WithValue</code> chỉ dành cho request-scoped metadata, không phải chỗ nhét tùy tiện mọi tham số.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Quên cancel có thể giữ timer và resource lâu hơn cần thiết. Nhiều người cũng lạm dụng <code>WithValue</code> như một global map ẩn, khiến code khó đọc và khó kiểm soát type.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng khi một tác vụ có thể bị hủy, có deadline, hoặc cần truyền metadata đi qua nhiều tầng xử lý.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">atomic & sync/atomic</div><div class="topic-desc">atomic operations, CAS, lock-free programming</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">atomic & sync/atomic</div><div class="topic-desc">atomic counters, CAS, config snapshots và khi nào atomic phù hợp hơn mutex</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
         <div class="tag-list"><span class="tag">atomic</span><span class="tag">CAS</span><span class="tag">lock-free</span><span class="level-badge level-adv">nâng cao</span></div>
-<pre><code class="language-go">import "sync/atomic"
-
-var counter atomic.Int64
+<pre><code class="language-go">var counter atomic.Int64
 counter.Add(1)
-n := counter.Load()
-counter.Store(100)
+fmt.Println(counter.Load())
 
-// Compare-And-Swap (CAS)
-var flag atomic.Bool
-if flag.CompareAndSwap(false, true) {
-    // chỉ một goroutine thực hiện được
-    doWork()
+var ready atomic.Bool
+if ready.CompareAndSwap(false, true) {
+    doSetup()
 }
 
-// atomic.Value cho arbitrary types
-var config atomic.Value
-config.Store(Config{MaxConn: 100})
-c := config.Load().(Config)</code></pre>
+type Config struct{ MaxConn int }
+
+var current atomic.Value
+current.Store(Config{MaxConn: 100})
+cfg := current.Load().(Config)
+fmt.Println(cfg.MaxConn)</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Atomic operations cho phép đọc/ghi một số trạng thái đơn giản mà không cần lock rõ ràng. Chúng hữu ích cho counters, flags, state transitions, hoặc snapshot config nhỏ.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Atomic phù hợp với state đơn giản và invariant hẹp. Nếu một thao tác liên quan nhiều field hoặc nhiều bước phải nhất quán cùng nhau, mutex thường đúng và dễ hiểu hơn.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Không được trộn access atomic và non-atomic trên cùng một biến. Atomic code “không khóa” nhưng không có nghĩa là dễ đúng; CAS loop và memory ordering dễ làm code khó đọc và khó review.</div>
+        <div class="note"><strong>Đọc sau:</strong> Nếu chưa có áp lực hiệu năng rõ ràng, hãy ưu tiên mutex trước. Atomic là công cụ mạnh nhưng nên dùng tiết chế.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">errgroup & singleflight</div><div class="topic-desc">golang.org/x/sync, parallel error handling, deduplication</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">errgroup & singleflight</div><div class="topic-desc">golang.org/x/sync, fail-fast coordination, parallel error handling và request deduplication</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
         <div class="tag-list"><span class="tag">errgroup</span><span class="tag">singleflight</span><span class="tag">x/sync</span><span class="level-badge level-adv">nâng cao</span></div>
-<pre><code class="language-go">import "golang.org/x/sync/errgroup"
+<pre><code class="language-go">import (
+    "golang.org/x/sync/errgroup"
+    "golang.org/x/sync/singleflight"
+)
 
-// errgroup: parallel tasks với error handling
 eg, ctx := errgroup.WithContext(context.Background())
-
 eg.Go(func() error { return task1(ctx) })
 eg.Go(func() error { return task2(ctx) })
 
 if err := eg.Wait(); err != nil {
-    // context tự cancel khi có lỗi
+    return err
 }
-
-// singleflight: deduplicate concurrent calls
-import "golang.org/x/sync/singleflight"
 
 var sf singleflight.Group
+
 func fetchUser(id string) (*User, error) {
-    v, err, _ := sf.Do(id, func() (any, error) {
-        return db.GetUser(id) // chỉ 1 request dù 100 goroutine gọi
+    v, err, shared := sf.Do(id, func() (any, error) {
+        return db.GetUser(id)
     })
+    _ = shared
     return v.(*User), err
 }</code></pre>
-      </div>
-    </div>
-
-    <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Worker Pool Pattern</div><div class="topic-desc">Pattern phổ biến: jobs channel + fixed workers + results channel</div></div><span class="chevron">▼</span></div>
-      <div class="topic-detail">
-        <div class="tag-list"><span class="tag">worker pool</span><span class="tag">pattern</span><span class="level-badge level-inter">trung cấp</span></div>
-<pre><code class="language-go">func workerPool(jobs &lt;-chan int, results chan&lt;- int, wg *sync.WaitGroup) {
-    defer wg.Done()
-    for j := range jobs {
-        results &lt;- j * j
-    }
-}
-
-func main() {
-    jobs := make(chan int, 100)
-    results := make(chan int, 100)
-    var wg sync.WaitGroup
-
-    for w := 0; w &lt; 3; w++ {
-        wg.Add(1)
-        go workerPool(jobs, results, &amp;wg)
-    }
-
-    for j := 1; j &lt;= 9; j++ { jobs &lt;- j }
-    close(jobs)
-
-    go func() { wg.Wait(); close(results) }()
-
-    for r := range results { fmt.Println(r) }
-}</code></pre>
+        <div class="note"><strong>Ý chính:</strong> <code>errgroup</code> rất hợp khi nhiều goroutine cùng phục vụ một tác vụ lớn và chỉ cần một lỗi là nên fail-fast. <code>singleflight</code> giúp deduplicate nhiều request giống nhau đang diễn ra cùng lúc.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>errgroup</code> thường là lựa chọn tốt hơn <code>WaitGroup</code> khi bạn cần gom lỗi và hủy sibling tasks theo <code>context</code>. <code>singleflight</code> chỉ gộp lời gọi trùng key tại cùng thời điểm, nó không phải cache.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Dùng <code>singleflight</code> rồi tưởng rằng dữ liệu đã được lưu lại cho lần gọi sau. Hoặc dùng <code>WaitGroup</code> thủ công trong bài toán fail-fast làm code dài và khó kiểm soát hơn mức cần thiết.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng <code>errgroup</code> cho parallel sub-tasks kiểu fetch nhiều nguồn rồi tổng hợp. Dùng <code>singleflight</code> để tránh cache stampede hoặc duplicate expensive calls.</div>
       </div>
     </div>
 
