@@ -18,6 +18,8 @@ type Topic struct {
 	HTML        string `json:"html"`
 }
 
+const searchDataPath = "assets/js/search_data.js"
+
 const (
 	prismCSSLine  = `  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />`
 	prismJSLine   = `  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>`
@@ -128,7 +130,7 @@ func main() {
 
 		if file == "index.html" {
 			if !strings.Contains(content, "fuse.js") {
-				content = strings.Replace(content, "</body>", `  <script src="https://cdn.jsdelivr.net/npm/fuse.js/6.6.2"></script>`+"\n"+`  <script src="search_data.js"></script>`+"\n</body>", 1)
+				content = strings.Replace(content, "</body>", `  <script src="https://cdn.jsdelivr.net/npm/fuse.js/6.6.2"></script>`+"\n"+`  <script src="assets/js/search_data.js"></script>`+"\n</body>", 1)
 			}
 		}
 
@@ -141,9 +143,12 @@ func main() {
 
 	jsonData, _ := json.MarshalIndent(topics, "", "  ")
 	searchDataJS := "window.SEARCH_DATA = " + string(jsonData) + ";"
-	err = os.WriteFile("search_data.js", []byte(searchDataJS), 0644)
+	if err := os.MkdirAll(filepath.Dir(searchDataPath), 0755); err != nil {
+		panic(err)
+	}
+	err = os.WriteFile(searchDataPath, []byte(searchDataJS), 0644)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Generated search_data.js with", len(topics), "topics")
+	fmt.Println("Generated", searchDataPath, "with", len(topics), "topics")
 }

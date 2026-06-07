@@ -54,7 +54,7 @@ function toggleCard(card){
 function initSearch() {
   if (fuse) return;
   if (typeof window.SEARCH_DATA === 'undefined') {
-    console.error("Search data is missing. Please ensure search_data.js is loaded.");
+    console.error("Search data is missing. Please ensure assets/js/search_data.js is loaded.");
     return;
   }
   
