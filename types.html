@@ -33,6 +33,7 @@ ok := true
 
 hex := 0xff
 bin := 0b1010
+oct := 0o755
 sep := 1_000_000
 
 fmt.Println(5 / 2)          // 2: chia số nguyên bị cắt phần lẻ
@@ -63,6 +64,10 @@ rs[0] = 'h'
 s2 := string(rs)
 
 raw := `C:\Go\learn` // raw string literal
+_ = b
+_ = r
+_ = s2
+_ = raw
 
 for i, r := range s {
     fmt.Println(i, r)
@@ -97,6 +102,7 @@ s := strconv.FormatInt(n, 10) // "42"
 i, err := strconv.Atoi("123")
 _ = i
 _ = err
+_ = s
 
 // Cẩn thận: string(65) = "A", không phải "65"
 fmt.Println(string(65))</code></pre>
@@ -167,7 +173,9 @@ type Number interface {
 // Underlying type với ~
 type MyInt int
 type Integer interface { ~int }
-// MyInt thỏa mãn Integer vì underlying = int</code></pre>
+// MyInt thỏa mãn Integer vì underlying = int
+
+func Add[T Integer](a, b T) T { return a + b }</code></pre>
         <div class="note"><strong>Ý chính:</strong> <code>any</code> là alias của <code>interface{}</code>. Trong generics, constraints giúp mô tả tập type được phép dùng làm type parameter.</div>
         <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>comparable</code> dùng cho các type có thể so sánh bằng <code>==</code> và <code>!=</code>. <code>~T</code> nghĩa là chấp nhận mọi type có underlying type là <code>T</code>.</div>
         <div class="note"><strong>Lỗi hay gặp:</strong> <code>slice</code>, <code>map</code>, và <code>func</code> không thỏa <code>comparable</code>. Nhiều người cũng nhầm <code>any</code> là “dynamic typing”, nhưng Go vẫn kiểm tra type rất chặt.</div>

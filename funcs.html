@@ -20,18 +20,93 @@
   <div id="funcs-cards" class="topic-grid">
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Variadic & first-class functions</div><div class="topic-desc">...T, function type, higher-order functions</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Khai báo hàm, tham số & naming</div><div class="topic-desc">func, parameters, return type, pass-by-value, exported names và các quy tắc nền tảng</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">variadic</span><span class="tag">first-class</span><span class="tag">higher-order</span><span class="level-badge level-basic">cơ bản</span></div>
+        <div class="tag-list"><span class="tag">func</span><span class="tag">params</span><span class="tag">return</span><span class="tag">naming</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">func add(a int, b int) int {
+    return a + b
+}
+
+func subtract(a, b int) int { // các param cùng type có thể gộp
+    return a - b
+}
+
+func greet(name string) {
+    fmt.Println("hello", name)
+}
+
+func scale(nums []int, factor int) {
+    for i := range nums {
+        nums[i] *= factor
+    }
+}
+
+nums := []int{1, 2, 3}
+scale(nums, 2)
+fmt.Println(nums) // [2 4 6]
+
+func ParseUser(raw string) (User, error) { /* ... */ }
+func parseHeader(raw string) string      { /* ... */ }</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Hàm trong Go khai báo bằng <code>func</code>, có danh sách tham số, và có thể có hoặc không có giá trị trả về. Hàm là đơn vị tổ chức logic quan trọng nhất trong ngôn ngữ.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Go truyền tham số theo value. Tuy nhiên nếu tham số là slice, map, pointer, channel, function, hay interface thì “giá trị được copy” vẫn có thể tham chiếu tới dữ liệu bên dưới, nên nhìn từ bên ngoài bạn vẫn thấy hiệu ứng thay đổi. Tên bắt đầu bằng chữ hoa là exported, chữ thường là chỉ dùng trong package.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Go không hỗ trợ function overloading, default arguments, hay named arguments. Bạn không thể khai báo hai hàm cùng tên chỉ khác kiểu tham số.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Tách hàm khi một đoạn logic có thể đặt tên rõ ràng, tái sử dụng được, hoặc giúp flow của code dễ đọc hơn.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Multiple returns & named results</div><div class="topic-desc">nhiều giá trị trả về, error pattern, named return và naked return</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">multiple return</span><span class="tag">named return</span><span class="tag">error</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">// Multiple return values
+func divide(a, b float64) (float64, error) {
+    if b == 0 {
+        return 0, errors.New("division by zero")
+    }
+    return a / b, nil
+}
+
+result, err := divide(10, 2)
+fmt.Println(result, err)
+
+cache := map[string]int{"go": 100}
+score, ok := cache["go"]
+fmt.Println(score, ok) // 100 true
+
+// Named return values
+func minMax(nums []int) (min, max int) {
+    min, max = nums[0], nums[0]
+    for _, n := range nums[1:] {
+        if n &lt; min { min = n }
+        if n &gt; max { max = n }
+    }
+    return // naked return: trả về min, max
+}
+
+_, err = divide(10, 0) // bỏ qua giá trị không cần dùng</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Go cho phép hàm trả về nhiều giá trị, và đây là một trong các idiom quan trọng nhất của ngôn ngữ. Pattern phổ biến nhất là <code>(value, error)</code>.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Named return values thực chất là các biến đã được khai báo sẵn trong scope của hàm. Chúng hữu ích khi kết hợp với <code>defer</code> hoặc khi tên kết quả giúp code rõ nghĩa hơn. Khi không cần một giá trị trả về, dùng <code>_</code> để bỏ qua.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Naked return trong hàm dài dễ làm code khó đọc vì người đọc phải nhớ biến nào đang được trả về. Với hàm ngắn thì ổn, nhưng với hàm dài thường nên return rõ ràng.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng nhiều giá trị trả về cho các trường hợp tự nhiên như <code>value, ok</code>, <code>value, err</code>, hoặc các cặp dữ liệu liên quan như <code>min, max</code>.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Variadic, function types & callbacks</div><div class="topic-desc">...T, function type, functions as values, callback và higher-order functions</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">variadic</span><span class="tag">first-class</span><span class="tag">callback</span><span class="tag">higher-order</span><span class="level-badge level-basic">cơ bản</span></div>
 <pre><code class="language-go">// Variadic function
 func sum(nums ...int) int {
     total := 0
-    for _, n := range nums { total += n }
+    for _, n := range nums {
+        total += n
+    }
     return total
 }
-sum(1, 2, 3)        // = 6
+
+fmt.Println(sum(1, 2, 3)) // 6
 nums := []int{1, 2, 3}
-sum(nums...)        // unpack slice
+fmt.Println(sum(nums...)) // unpack slice
 
 // Function type
 type Predicate func(int) bool
@@ -39,95 +114,129 @@ type Predicate func(int) bool
 func filter(nums []int, fn Predicate) []int {
     result := []int{}
     for _, n := range nums {
-        if fn(n) { result = append(result, n) }
+        if fn(n) {
+            result = append(result, n)
+        }
     }
     return result
 }
 
 isEven := func(n int) bool { return n%2 == 0 }
-evens := filter([]int{1,2,3,4}, isEven) // [2,4]</code></pre>
+evens := filter([]int{1, 2, 3, 4}, isEven)
+fmt.Println(evens) // [2 4]</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Trong Go, hàm là first-class value. Bạn có thể gán hàm cho biến, truyền hàm vào hàm khác, và trả về hàm như mọi giá trị khác.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Tham số variadic <code>...T</code> phải là tham số cuối cùng. Khi đã có slice cùng kiểu, có thể “unpack” bằng cú pháp <code>slice...</code>.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Function value có thể là <code>nil</code>. Gọi một function value nil sẽ panic ở runtime. Ngoài ra, function values chỉ so sánh được với <code>nil</code>, không so sánh trực tiếp với nhau bằng <code>==</code>.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng variadic cho các API như logging, formatting, collect values. Dùng higher-order function khi muốn truyền “hành vi” vào một pipeline hay helper chung.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Closure & capture</div><div class="topic-desc">Hàm lồng nhau, biến capture, counter, option pattern</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Anonymous functions, closure & capture</div><div class="topic-desc">hàm ẩn danh, closure giữ state, capture biến, IIFE và option pattern</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">closure</span><span class="tag">capture</span><span class="tag">state</span><span class="level-badge level-inter">trung cấp</span></div>
-<pre><code class="language-go">// Closure capture by reference
-func makeCounter() func() int {
+        <div class="tag-list"><span class="tag">closure</span><span class="tag">capture</span><span class="tag">state</span><span class="tag">anonymous</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">func makeCounter() func() int {
     count := 0
     return func() int {
         count++
         return count
     }
 }
-c := makeCounter()
-c() // 1
-c() // 2
 
-// Loop variable tự động rebind mỗi iteration
+c := makeCounter()
+fmt.Println(c()) // 1
+fmt.Println(c()) // 2
+
+func(msg string) {
+    fmt.Println("run once:", msg)
+}("boot")
+
+// Loop variable rebind mỗi iteration (Go 1.22+)
 callbacks := []func(){}
 for i := 0; i &lt; 3; i++ {
     callbacks = append(callbacks, func() { fmt.Println(i) })
 }
-for _, cb := range callbacks { cb() } // 0, 1, 2
+for _, cb := range callbacks {
+    cb() // 0, 1, 2
+}
 
-// Functional Options Pattern
+// Một ứng dụng phổ biến: functional options
+type Server struct{ port int }
 type Option func(*Server)
+
 func WithPort(p int) Option {
     return func(s *Server) { s.port = p }
-}
-s := NewServer(WithPort(8080))</code></pre>
-      </div>
-    </div>
-
-    <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Named return values & multiple returns</div><div class="topic-desc">Naked return, multiple return values, error pattern</div></div><span class="chevron">▼</span></div>
-      <div class="topic-detail">
-        <div class="tag-list"><span class="tag">named return</span><span class="tag">multiple return</span><span class="level-badge level-basic">cơ bản</span></div>
-<pre><code class="language-go">// Multiple return values
-func divide(a, b float64) (float64, error) {
-    if b == 0 { return 0, errors.New("division by zero") }
-    return a / b, nil
-}
-
-// Named return — tự động khai báo biến
-func minMax(nums []int) (min, max int) {
-    min, max = nums[0], nums[0]
-    for _, n := range nums[1:] {
-        if n &lt; min { min = n }
-        if n &gt; max { max = n }
-    }
-    return  // naked return: trả về min, max
 }</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Closure là hàm có thể “nhớ” và dùng các biến ở scope bên ngoài. Đây là cách rất mạnh để giữ state nhỏ gọn mà không cần tạo struct riêng cho mọi trường hợp.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Biến bị capture không bị copy theo nghĩa “giá trị bất biến”; closure giữ tham chiếu logic tới biến trong scope của nó. Với loop variables, Go 1.22+ đã rebind mỗi iteration nên bug cũ quen thuộc đã được sửa.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Closure giữ state nên nếu dùng từ nhiều goroutine cùng lúc mà không đồng bộ, bạn vẫn có thể tạo race condition.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng cho callback, factory hàm, middleware, và các pattern như functional options khi muốn cấu hình object theo cách linh hoạt.</div>
       </div>
     </div>
 
     <div class="topic-card">
-      <div class="topic-header"><div><div class="topic-name">Method expressions & values</div><div class="topic-desc">Value receiver vs pointer receiver, method set</div></div><span class="chevron">▼</span></div>
+      <div class="topic-header"><div><div class="topic-name">Methods, receivers & method values</div><div class="topic-desc">value receiver, pointer receiver, method set, method expression và method value</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <div class="tag-list"><span class="tag">receiver</span><span class="tag">method set</span><span class="tag">value/pointer</span><span class="level-badge level-inter">trung cấp</span></div>
-<pre><code class="language-go">type Point struct { X, Y float64 }
+        <div class="tag-list"><span class="tag">receiver</span><span class="tag">method set</span><span class="tag">method value</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">type Point struct{ X, Y float64 }
 
 // Value receiver — không thay đổi gốc
 func (p Point) Distance() float64 {
     return math.Sqrt(p.X*p.X + p.Y*p.Y)
 }
 
-// Pointer receiver — có thể thay đổi
+// Pointer receiver — có thể thay đổi gốc
 func (p *Point) Scale(factor float64) {
-    p.X *= factor; p.Y *= factor
+    p.X *= factor
+    p.Y *= factor
 }
 
-// Method expression (function với receiver là arg đầu)
+// Method expression: receiver là arg đầu tiên
 dist := Point.Distance
-dist(Point{3, 4})    // = 5.0
+fmt.Println(dist(Point{3, 4})) // 5
 
-// Method value (bound to specific instance)
-p := &amp;Point{3, 4}
+// Method value: bind sẵn vào instance cụ thể
+p := &Point{3, 4}
 scale := p.Scale
-scale(2)              // p.X=6, p.Y=8</code></pre>
-        <div class="note"><strong>Quy tắc:</strong> Nếu bất kỳ method nào cần pointer receiver, nên dùng pointer receiver cho <em>toàn bộ</em> type đó. Pointer receiver có method set lớn hơn value receiver.</div>
+scale(2)
+fmt.Println(p) // &{6 8}</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Method là function gắn với một receiver type. Đây là cách Go cho phép type có “hành vi” mà không cần class như trong OOP truyền thống.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Value receiver phù hợp khi method không sửa dữ liệu gốc và type đủ nhỏ để copy hợp lý. Pointer receiver phù hợp khi cần mutate hoặc muốn tránh copy lớn. Nếu biến là addressable value, Go có thể tự lấy địa chỉ để gọi pointer receiver method như <code>p.Scale(2)</code>.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nếu một type có cả value receiver lẫn pointer receiver lẫn lộn không có chủ ý, method set và interface satisfaction dễ trở nên khó đoán. Nếu bất kỳ method nào thật sự cần pointer receiver, thường nên dùng pointer receiver nhất quán cho cả type.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng method khi hành vi gắn chặt với dữ liệu của type. Dùng method value khi muốn truyền “một hành vi đã bound sẵn vào object”, còn method expression khi muốn lấy method như một function tổng quát.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Generic functions & type inference</div><div class="topic-desc">type parameters, inference, instantiation và khi nào nên dùng generics cho hàm</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">generics</span><span class="tag">type params</span><span class="tag">inference</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">func Map[T, U any](items []T, fn func(T) U) []U {
+    out := make([]U, len(items))
+    for i, item := range items {
+        out[i] = fn(item)
+    }
+    return out
+}
+
+labels := Map([]int{1, 2, 3}, func(n int) string {
+    return fmt.Sprintf("n=%d", n)
+})
+fmt.Println(labels) // [n=1 n=2 n=3]
+
+func Min[T cmp.Ordered](a, b T) T {
+    if a &lt; b {
+        return a
+    }
+    return b
+}
+
+fmt.Println(Min(3, 5))      // type inference
+fmt.Println(Min[int](3, 5)) // explicit instantiation</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Generic function cho phép một hàm làm việc với nhiều type mà vẫn giữ type safety ở compile time. Đây là cách Go tái sử dụng thuật toán mà không phải rơi về <code>any</code> quá sớm.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Go thường suy luận được type arguments từ input, nên nhiều lúc bạn không cần viết <code>[T]</code> tường minh. Khi compiler không suy luận nổi, bạn mới cần explicit instantiation như <code>Min[int](3, 5)</code>.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Đừng dùng generics chỉ để “trông hiện đại”. Nếu code chỉ phục vụ một type cụ thể hoặc abstraction làm API khó đọc hơn, hàm thường vẫn tốt hơn.</div>
+        <div class="note"><strong>Đọc sau:</strong> Phần này là trực giác dùng generic functions trong thực tế. Constraint sâu hơn, union types và <code>~</code> nên xem kỹ thêm ở module <code>generics</code> và <code>types</code>.</div>
       </div>
     </div>
 
