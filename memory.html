@@ -144,7 +144,9 @@ fmt.Printf("heap=%d MiB, objects=%d, nextGC=%d MiB\n",
       <div class="topic-header"><div><div class="topic-name">sync.Pool</div><div class="topic-desc">object pooling, temporary buffers, GC interaction và những chỗ sync.Pool không phù hợp</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
         <div class="tag-list"><span class="tag">sync.Pool</span><span class="tag">pooling</span><span class="tag">reuse</span><span class="level-badge level-adv">nâng cao</span></div>
-<pre><code class="language-go">var bufPool = sync.Pool{
+<pre><code class="language-go">const maxPooledBufferCap = 64 &lt;&lt; 10 // 64 KiB
+
+var bufPool = sync.Pool{
     New: func() any {
         return &amp;bytes.Buffer{}
     },
@@ -153,8 +155,11 @@ fmt.Printf("heap=%d MiB, objects=%d, nextGC=%d MiB\n",
 func encode(data any) ([]byte, error) {
     buf := bufPool.Get().(*bytes.Buffer)
     defer func() {
+        // Reset chỉ đưa len về 0; buffer quá lớn nên bỏ cho GC thu gom.
         buf.Reset()
-        bufPool.Put(buf)
+        if buf.Cap() &lt;= maxPooledBufferCap {
+            bufPool.Put(buf)
+        }
     }()
 
     if err := json.NewEncoder(buf).Encode(data); err != nil {
@@ -166,8 +171,8 @@ func encode(data any) ([]byte, error) {
     return out, nil
 }</code></pre>
         <div class="note"><strong>Ý chính:</strong> <code>sync.Pool</code> giúp tái sử dụng object tạm thời giữa nhiều goroutine để giảm allocation pressure. Nó đặc biệt hợp cho <code>bytes.Buffer</code>, encoder/decoder scratch objects, hoặc temporary structs dùng đi dùng lại.</div>
-        <div class="note"><strong>Quy tắc cần nhớ:</strong> Item trong pool có thể bị runtime bỏ đi bất cứ lúc nào, nhất là qua các chu kỳ GC. Vì vậy pool không phải cache bền vững. Luôn reset object trước khi <code>Put</code>, và không copy <code>sync.Pool</code> sau khi đã bắt đầu dùng.</div>
-        <div class="note"><strong>Lỗi hay gặp:</strong> Một bug phổ biến là trả object về pool rồi vẫn giữ slice/string trỏ vào bộ nhớ bên trong object đó. Ví dụ trên copy dữ liệu ra <code>out</code> trước khi <code>Put</code> lại buffer chính là để tránh lỗi kiểu này.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Item trong pool có thể bị runtime bỏ đi bất cứ lúc nào, nhất là qua các chu kỳ GC. Vì vậy pool không phải cache bền vững. Luôn reset object trước khi <code>Put</code>, không copy <code>sync.Pool</code> sau khi đã bắt đầu dùng, và thường nên đặt ngưỡng để buffer quá lớn không quay lại pool.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Một bug phổ biến là trả object về pool rồi vẫn giữ slice/string trỏ vào bộ nhớ bên trong object đó. Ví dụ trên copy dữ liệu ra <code>out</code> trước khi <code>Put</code> lại buffer chính là để tránh lỗi kiểu này. Một bẫy khác là chỉ gọi <code>Reset()</code> rồi trả luôn các buffer "quái vật" về pool, khiến RSS bị phình ra lâu hơn cần thiết.</div>
         <div class="note"><strong>Khi nào dùng:</strong> Dùng khi profiling cho thấy allocation của object tạm thời lặp lại rất nhiều dưới tải thật. Nếu workload hiếm, object lớn bất thường, hoặc lifecycle gắn với một object ngắn hạn riêng lẻ, pool có thể không đáng dùng.</div>
       </div>
     </div>

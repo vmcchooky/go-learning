@@ -11,6 +11,9 @@
 .kw-philosophy { margin-top: 14px; padding: 12px 14px; background: rgba(0, 173, 216, 0.05); border-left: 3px solid var(--accent); border-radius: 4px; font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
 .kw-philosophy strong { color: var(--text-primary); }
 .cat-title { font-size: 18px; margin: 2rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); color: var(--text-primary); font-weight: 600; }
+.quick-nav { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 2rem; }
+.quick-nav a { display: inline-flex; align-items: center; padding: 8px 12px; border: 1px solid var(--border); border-radius: 999px; background: rgba(255,255,255,0.04); color: var(--text-secondary); text-decoration: none; font-size: 13px; line-height: 1.2; transition: transform .15s ease, border-color .15s ease, color .15s ease; }
+.quick-nav a:hover { color: var(--text-primary); border-color: var(--accent); transform: translateY(-1px); }
 </style>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
 </head>
@@ -28,8 +31,18 @@
   
   <div class="note" style="margin-bottom: 2rem; padding: 16px;">Ngôn ngữ Go được thiết kế với sự tối giản cực đoan, chỉ bao gồm <strong>25 từ khóa (keywords)</strong>. Tư duy thiết kế này hướng tới nguyên tắc tính trực giao (Orthogonality), giảm thiểu độ phức tạp về mặt cú pháp để tối ưu hóa hiệu năng biên dịch và khả năng đọc hiểu mã nguồn ở quy mô lớn.</div>
 
+  <div class="quick-nav">
+    <a href="#kw-cat-packages">1. Quản lý Package</a>
+    <a href="#kw-cat-declarations">2. Khai báo</a>
+    <a href="#kw-cat-composite">3. Kiểu phức hợp</a>
+    <a href="#kw-cat-flow">4. Điều khiển Luồng</a>
+    <a href="#kw-cat-concurrency">5. Đồng thời</a>
+    <a href="#kw-cat-cleanup">6. Thoát & Dọn dẹp</a>
+    <a href="#kw-cat-predeclared">7. Định danh có sẵn</a>
+  </div>
+
   <!-- 1. QUẢN LÝ PACKAGE -->
-  <div class="cat-title">1. Quản lý Package (Package Management)</div>
+  <div id="kw-cat-packages" class="cat-title">1. Quản lý Package (Package Management)</div>
   <div class="topic-grid">
     <div class="topic-card">
       <div class="topic-header"><div><div class="kw-title">package</div><div class="topic-desc">Định nghĩa không gian tên (namespace) cho file nguồn hiện tại.</div></div><span class="chevron">▼</span></div>
@@ -51,7 +64,7 @@
   </div>
 
   <!-- 2. KHAI BÁO THỰC THỂ -->
-  <div class="cat-title">2. Khai báo Thực thể (Declarations)</div>
+  <div id="kw-cat-declarations" class="cat-title">2. Khai báo Thực thể (Declarations)</div>
   <div class="topic-grid">
     <div class="topic-card">
       <div class="topic-header"><div><div class="kw-title">var</div><div class="topic-desc">Khai báo một hoặc nhiều biến, có thể gán giá trị khởi tạo.</div></div><span class="chevron">▼</span></div>
@@ -85,7 +98,7 @@ type ID int64</code></pre>
   </div>
 
   <!-- 3. KIỂU DỮ LIỆU PHỨC HỢP -->
-  <div class="cat-title">3. Kiểu dữ liệu Phức hợp (Composite Types)</div>
+  <div id="kw-cat-composite" class="cat-title">3. Kiểu dữ liệu Phức hợp (Composite Types)</div>
   <div class="topic-grid">
     <div class="topic-card">
       <div class="topic-header"><div><div class="kw-title">struct</div><div class="topic-desc">Cấu trúc dữ liệu gom nhóm các trường (fields) có kiểu khác nhau.</div></div><span class="chevron">▼</span></div>
@@ -120,12 +133,12 @@ type ID int64</code></pre>
   </div>
 
   <!-- 4. ĐIỀU KHIỂN LUỒNG -->
-  <div class="cat-title">4. Điều khiển Luồng (Flow Control)</div>
+  <div id="kw-cat-flow" class="cat-title">4. Điều khiển Luồng (Flow Control)</div>
   <div class="topic-grid">
     <div class="topic-card">
       <div class="topic-header"><div><div class="kw-title">if</div><div class="topic-desc">Câu lệnh rẽ nhánh điều kiện cơ bản.</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <pre><code class="language-go">if err := init(); err != nil { ... }</code></pre>
+        <pre><code class="language-go">if err := setup(); err != nil { ... }</code></pre>
         <div class="kw-philosophy">Cú pháp rẽ nhánh của Go hỗ trợ khởi tạo biến cực kỳ tối ưu thông qua khái niệm Phạm vi từ vựng (Lexical Scoping). Biến cục bộ được khai báo ngay trên dòng lệnh if sẽ tự động bị hủy (out of scope) khi khối lệnh kết thúc. Sự cô lập này giúp giảm tải áp lực cho hệ thống dọn rác (Garbage Collector).</div>
       </div>
     </div>
@@ -212,7 +225,7 @@ case 2: ...</code></pre>
   </div>
 
   <!-- 5. ĐỒNG THỜI -->
-  <div class="cat-title">5. Đồng thời (Concurrency)</div>
+  <div id="kw-cat-concurrency" class="cat-title">5. Đồng thời (Concurrency)</div>
   <div class="topic-grid">
     <div class="topic-card">
       <div class="topic-header"><div><div class="kw-title">go</div><div class="topic-desc">Khởi chạy một hàm thành tiến trình bất đồng bộ (Goroutine).</div></div><span class="chevron">▼</span></div>
@@ -234,7 +247,7 @@ case &lt;-time.After(sec):
   </div>
 
   <!-- 6. THOÁT & DỌN DẸP -->
-  <div class="cat-title">6. Thoát & Dọn dẹp (Return & Cleanup)</div>
+  <div id="kw-cat-cleanup" class="cat-title">6. Thoát & Dọn dẹp (Return & Cleanup)</div>
   <div class="topic-grid">
     <div class="topic-card">
       <div class="topic-header"><div><div class="kw-title">return</div><div class="topic-desc">Kết thúc hàm và trả về kết quả (hỗ trợ trả về nhiều biến).</div></div><span class="chevron">▼</span></div>
@@ -254,7 +267,7 @@ defer f.Close()</code></pre>
   </div>
 
   <!-- 7. CÁC ĐỊNH DANH CÓ SẴN -->
-  <div class="cat-title">7. Các định danh có sẵn (Predeclared Identifiers)</div>
+  <div id="kw-cat-predeclared" class="cat-title">7. Các định danh có sẵn (Predeclared Identifiers)</div>
   <div class="note" style="margin-bottom: 2rem; padding: 16px;">Khác với 25 từ khóa bị khóa cứng, Go cung cấp khoảng hơn 40 định danh có sẵn (kiểu dữ liệu, hằng số, hàm tích hợp). Dưới đây là hơn 20 định danh nền tảng quan trọng nhất cấu thành nên sự linh hoạt của ngôn ngữ. Mặc dù bạn <strong>có thể</strong> gán lại chúng (ví dụ: <code>var len = 10</code>), nhưng việc che khuất (shadowing) này được coi là Anti-pattern nguy hiểm.</div>
   
   <div class="topic-grid">
@@ -268,9 +281,10 @@ defer f.Close()</code></pre>
     <div class="topic-card">
       <div class="topic-header"><div><div class="kw-title">iota</div><div class="topic-desc">Trình tạo hằng số nguyên tự động tăng trong khối const.</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
-        <pre><code class="language-go">const (
-    A = iota  // 0
-    B         // 1
+<pre><code class="language-go">const (
+    _ = iota // bỏ qua giá trị 0
+    A        // 1
+    B        // 2
 )</code></pre>
         <div class="kw-philosophy">Hoạt động như một biến đếm vòng lặp nội tại của trình biên dịch trong giai đoạn phân tích cú pháp tĩnh. Thường được sử dụng kết hợp với các phép toán dịch bit (bitwise shift) để xây dựng hệ thống cờ trạng thái (Flags/Bitmasks) hoặc mô phỏng kiểu liệt kê (Enum) một cách thanh lịch và tối ưu bộ nhớ.</div>
       </div>
@@ -295,7 +309,7 @@ defer f.Close()</code></pre>
       <div class="topic-header"><div><div class="kw-title">make</div><div class="topic-desc">Khởi tạo bộ nhớ và cấu trúc ẩn cho Slice, Map, và Channel.</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
         <pre><code class="language-go">s := make([]int, 0, 10)</code></pre>
-        <div class="kw-philosophy"><code>make</code> dùng để khởi tạo slice, map, và channel rồi trả về chính value đó, không phải con trỏ. Việc object cuối cùng nằm trên stack hay heap do compiler quyết định; điểm quan trọng ở đây là <code>make</code> chuẩn bị cấu trúc runtime cần thiết để giá trị có thể dùng ngay.</div>
+        <div class="kw-philosophy"><code>make</code> dùng để khởi tạo slice, map, và channel rồi trả về chính value đó, không phải con trỏ. Việc object cuối cùng nằm trên stack hay heap do compiler quyết định; điểm quan trọng ở đây là <code>make</code> chuẩn bị cấu trúc runtime cần thiết để giá trị có thể dùng ngay. Quy tắc vàng: <code>new</code> cấp phát zero-value và trả về con trỏ (<code>*T</code>), trong khi <code>make</code> khởi tạo cấu trúc bên trong và trả về chính giá trị (<code>T</code>).</div>
       </div>
     </div>
     <div class="topic-card">

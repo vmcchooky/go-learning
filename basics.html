@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Go 1.26.4 — Cơ bản</title>
 <link rel="stylesheet" href="style.css">
+  <style>
+    .cat-title { font-size: 18px; margin: 2rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); color: var(--text-primary); font-weight: 600; }
+    #basics-cards > .cat-title:first-child { margin-top: 0; }
+  </style>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
 </head>
 <body>
@@ -17,7 +21,9 @@
 <div class="content">
 <!-- BASICS -->
 <div id="basics" class="section active">
-  <div id="basics-cards" class="topic-grid">
+  <div id="basics-cards">
+    <div class="cat-title">1. Cú pháp lõi</div>
+    <div class="topic-grid">
 
     <div class="topic-card">
       <div class="topic-header"><div><div class="topic-name">Biến, hằng số & zero value</div><div class="topic-desc">var, :=, const, iota, naming, scope, nhiều kiểu gán biến</div></div><span class="chevron">▼</span></div>
@@ -61,8 +67,42 @@ if n := len(title); n > 0 {
 }</code></pre>
         <div class="note"><strong>Ý chính:</strong> Biến trong Go luôn có zero value nên bạn có thể khai báo trước rồi mới gán sau. <code>:=</code> là cách khai báo ngắn gọn nhất cho biến cục bộ khi kiểu đã rõ.</div>
         <div class="note"><strong>Các cách gán cần nhớ:</strong> Explicit declaration, initialization, short declaration, multiple assignment, blank identifier assignment, constant assignment, iota assignment, và inline assignment trong <code>if</code>/<code>switch</code>.</div>
+        <div class="note"><strong>Blank identifier <code>_</code>:</strong> Đây không chỉ là “thùng rác” để bỏ giá trị, mà còn là cách nói với compiler rằng bạn <em>cố ý</em> không dùng kết quả đó. Dùng khi thật sự không cần giá trị; đừng biến <code>_</code> thành cách né xử lý <code>err</code>.</div>
         <div class="note"><strong>Quy tắc đặt tên:</strong> Tên package nên ngắn, lowercase, không gạch dưới. Tên export bắt đầu bằng chữ hoa. Tên local thường dùng <code>mixedCaps</code>. Tránh lặp nghĩa kiểu <code>user.UserName</code> nếu package đã là <code>user</code>.</div>
         <div class="note"><strong>Lỗi hay gặp:</strong> Biến cục bộ khai báo mà không dùng sẽ làm chương trình không biên dịch. <code>:=</code> phải tạo ít nhất một biến mới trong cùng scope và rất dễ gây shadowing nếu dùng trong block con.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Ép kiểu (Type Conversions)</div><div class="topic-desc">Ép kiểu tường minh giữa số, string, []byte, []rune và các bẫy thường gặp</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">conversion</span><span class="tag">float64(x)</span><span class="tag">[]byte</span><span class="tag">[]rune</span><span class="level-badge level-basic">cơ bản</span></div>
+<pre><code class="language-go">count := 10
+ratio := 2.5
+sum := float64(count) + ratio
+
+fmt.Println(sum) // 12.5
+fmt.Println(int(3.99)) // 3: cắt phần thập phân
+
+word := "đây"
+raw := []byte(word)
+runes := []rune(word)
+
+fmt.Println(len(raw))   // số byte UTF-8
+fmt.Println(len(runes)) // số rune
+
+text := string(raw)
+fmt.Println(text) // "đây"
+
+fmt.Println(string(65))      // "A"
+fmt.Println(strconv.Itoa(65)) // "65"
+
+n := 256
+fmt.Println(int8(n)) // 0: cắt theo 8 bit thấp</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Go không tự ép kiểu ngầm giữa các kiểu số hay giữa các kiểu gần giống nhau. Muốn đổi kiểu, bạn phải viết rõ <code>T(v)</code>.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Ép từ <code>float</code> sang <code>int</code> sẽ cắt phần lẻ. Ép sang kiểu nhỏ hơn như <code>int64 -&gt; int8</code> có thể làm mất dữ liệu hoặc overflow theo số bit của kiểu đích.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> <code>string(65)</code> tạo chuỗi từ mã Unicode/rune, không phải chuỗi chữ số <code>"65"</code>. Muốn đổi số sang text, hãy dùng <code>strconv</code>.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng khi trộn nhiều kiểu số, làm việc với dữ liệu byte từ file/network, hoặc cần xử lý Unicode bằng <code>[]rune</code> thay vì từng byte.</div>
       </div>
     </div>
 
@@ -184,6 +224,10 @@ for row := range 3 {
         <div class="note"><strong>Đọc sau:</strong> Từ Go mới hơn, <code>range</code> còn hỗ trợ iterator function. Nên học sau khi đã quen các kiểu range cơ bản.</div>
       </div>
     </div>
+
+    </div>
+    <div class="cat-title">2. Cấu trúc dữ liệu</div>
+    <div class="topic-grid">
 
     <div class="topic-card">
       <div class="topic-header"><div><div class="topic-name">Array</div><div class="topic-desc">Kích thước cố định và mang ngữ nghĩa value type</div></div><span class="chevron">▼</span></div>
@@ -325,6 +369,10 @@ fmt.Println(seen)  // map[]</code></pre>
       </div>
     </div>
 
+    </div>
+    <div class="cat-title">3. Tổ chức dự án</div>
+    <div class="topic-grid">
+
     <div class="topic-card">
       <div class="topic-header"><div><div class="topic-name">Packages</div><div class="topic-desc">Tách code theo package, export/unexport, import alias, blank import và init</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
@@ -380,6 +428,10 @@ require golang.org/x/sync v0.20.0
         <div class="note"><strong>Đọc sau:</strong> Thư mục <code>internal/</code> giúp giới hạn package nào được phép import code bên trong. Hữu ích khi dự án lớn hơn.</div>
       </div>
     </div>
+
+    </div>
+    <div class="cat-title">4. Kiểm soát luồng nâng cao</div>
+    <div class="topic-grid">
 
     <div class="topic-card">
       <div class="topic-header"><div><div class="topic-name">Error handling</div><div class="topic-desc">error, wrapping, errors.Is, errors.As và custom error cơ bản</div></div><span class="chevron">▼</span></div>
@@ -487,6 +539,7 @@ func wrongRecover() {
       </div>
     </div>
 
+    </div>
   </div>
 </div>
 </div>
