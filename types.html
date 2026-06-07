@@ -49,6 +49,31 @@ var y int64 = int64(x) // conversion phải explicit</code></pre>
     </div>
 
     <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Hằng số vô kiểu (Untyped constants)</div><div class="topic-desc">Hằng số vô kiểu, implicit fitting theo ngữ cảnh và vì sao 5 * time.Second hợp lệ</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">const</span><span class="tag">untyped</span><span class="tag">time.Duration</span><span class="tag">implicit fitting</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">const answer = 42      // untyped integer constant
+const ratio = 2.5     // untyped floating constant
+
+var i int8 = answer   // OK nếu giá trị biểu diễn được
+var f float64 = ratio // OK
+
+wait := 5 * time.Second        // 5 "fit" vào time.Duration
+half := 5 / 2                  // 2: constant integer division
+exact := 5 / 2.0               // 2.5: constant floating division
+
+fmt.Println(wait)
+fmt.Println(half, exact)
+
+// var bad int8 = 128 // ERROR: 128 không fit vào int8</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Nhiều hằng số trong Go là <em>untyped constants</em>. Chúng chưa bị khóa vào một type cụ thể cho tới khi ngữ cảnh sử dụng yêu cầu, nên compiler có thể “fit” chúng vào kiểu đích nếu giá trị còn biểu diễn được.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Đây là lý do <code>5 * time.Second</code> hợp lệ dù <code>5</code> không phải <code>time.Duration</code>. Với hằng số vô kiểu, Go linh hoạt hơn biến thông thường, nhưng chỉ trong giới hạn giá trị hợp lệ cho kiểu đích.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người học xong “Go không implicit cast” rồi tưởng mọi trường hợp đều phải viết conversion. Hằng số vô kiểu là ngoại lệ rất quan trọng. Tuy nhiên nếu giá trị không fit, compiler vẫn sẽ báo lỗi như <code>var x int8 = 128</code>.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Hiểu khái niệm này khi làm việc với duration, bit shift, biểu thức hằng số, hoặc khi thấy một dòng code tưởng như “không cùng kiểu mà vẫn compile”.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
       <div class="topic-header"><div><div class="topic-name">String, byte & rune</div><div class="topic-desc">UTF-8, immutability, len theo byte, rune theo code point</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
         <div class="tag-list"><span class="tag">string</span><span class="tag">byte</span><span class="tag">rune</span><span class="tag">UTF-8</span><span class="level-badge level-basic">cơ bản</span></div>
@@ -142,6 +167,7 @@ func describe(i any) string {
 }</code></pre>
         <div class="note"><strong>Ý chính:</strong> Type assertion và type switch chỉ áp dụng cho giá trị interface như <code>any</code>. Chúng cho phép lấy giá trị concrete bên trong interface khi bạn cần xử lý theo type thực tế.</div>
         <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>v.(T)</code> sẽ panic nếu giá trị bên trong không phải <code>T</code>. Nếu không chắc chắn, hãy dùng dạng <code>x, ok := v.(T)</code>.</div>
+        <div class="note"><strong>Mẹo debug với <code>%T</code>:</strong> Khi không chắc interface đang chứa kiểu gì, <code>fmt.Printf("%T\n", v)</code> gần như là “bùa hộ mệnh” đầu tiên nên dùng. Nó cho bạn concrete type thực sự mà không cần nhảy ngay sang <code>reflect</code>.</div>
         <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người cố assertion trên biến không phải interface, hoặc quên comma-ok rồi gặp panic ở runtime.</div>
         <div class="note"><strong>Khi nào dùng:</strong> Dùng khi làm việc với API nhận <code>any</code>, decode dữ liệu động, middleware, reflection-lite, hoặc xử lý nhiều loại giá trị trong cùng một luồng.</div>
       </div>
@@ -180,6 +206,35 @@ func Add[T Integer](a, b T) T { return a + b }</code></pre>
         <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>comparable</code> dùng cho các type có thể so sánh bằng <code>==</code> và <code>!=</code>. <code>~T</code> nghĩa là chấp nhận mọi type có underlying type là <code>T</code>.</div>
         <div class="note"><strong>Lỗi hay gặp:</strong> <code>slice</code>, <code>map</code>, và <code>func</code> không thỏa <code>comparable</code>. Nhiều người cũng nhầm <code>any</code> là “dynamic typing”, nhưng Go vẫn kiểm tra type rất chặt.</div>
         <div class="note"><strong>Đọc sau:</strong> Khi dùng generics thực tế, bạn sẽ gặp thêm các constraints như <code>cmp.Ordered</code> hoặc custom constraints theo domain của project.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Empty struct: struct{}</div><div class="topic-desc">Kiểu 0-byte, map làm set và chan struct{} để báo hiệu</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">struct{}</span><span class="tag">set</span><span class="tag">chan struct{}</span><span class="tag">signal</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">// Dùng như Set
+seen := map[string]struct{}{
+    "go":   {},
+    "rust": {},
+}
+
+if _, ok := seen["go"]; ok {
+    fmt.Println("exists")
+}
+
+// Dùng như signal channel
+done := make(chan struct{})
+go func() {
+    // ... work ...
+    close(done) // broadcast done
+}()
+
+&lt;-done</code></pre>
+        <div class="note"><strong>Ý chính:</strong> <code>struct{}</code> là kiểu struct rỗng có kích thước <code>0 byte</code>. Nó không mang dữ liệu và về mặt ý tưởng là “sự hiện diện của một giá trị” chứ không phải “một payload cần copy”.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>map[K]struct{}</code> là idiom quen thuộc để biểu diễn set. <code>chan struct{}</code> thường dùng để báo hiệu <code>done</code>, <code>stop</code>, hoặc “đã xong” mà không cần gửi dữ liệu thật.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Người mới hay chọn <code>map[string]bool</code> hay <code>chan bool</code> cho mọi trường hợp. Chúng không sai, nhưng đôi khi làm mờ ý đồ: bạn đang lưu trạng thái boolean, hay chỉ cần biểu diễn “có/không” và “xong/chưa xong”?</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng khi chỉ cần đánh dấu sự tồn tại của key, hoặc cần một tín hiệu đồng bộ rất nhẹ giữa goroutines.</div>
       </div>
     </div>
 

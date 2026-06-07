@@ -35,6 +35,10 @@ func greet(name string) {
     fmt.Println("hello", name)
 }
 
+func handleRequest(_ context.Context, reqID int) {
+    fmt.Println("processing:", reqID)
+}
+
 func scale(nums []int, factor int) {
     for i := range nums {
         nums[i] *= factor
@@ -49,7 +53,9 @@ func ParseUser(raw string) (User, error) { /* ... */ }
 func parseHeader(raw string) string      { /* ... */ }</code></pre>
         <div class="note"><strong>Ý chính:</strong> Hàm trong Go khai báo bằng <code>func</code>, có danh sách tham số, và có thể có hoặc không có giá trị trả về. Hàm là đơn vị tổ chức logic quan trọng nhất trong ngôn ngữ.</div>
         <div class="note"><strong>Quy tắc cần nhớ:</strong> Go truyền tham số theo value. Tuy nhiên nếu tham số là slice, map, pointer, channel, function, hay interface thì “giá trị được copy” vẫn có thể tham chiếu tới dữ liệu bên dưới, nên nhìn từ bên ngoài bạn vẫn thấy hiệu ứng thay đổi. Tên bắt đầu bằng chữ hoa là exported, chữ thường là chỉ dùng trong package.</div>
+        <div class="note"><strong>Blank parameter <code>_</code>:</strong> Nếu một interface, handler, hay callback bắt buộc nhận tham số mà bạn thật sự không dùng đến, có thể đặt tên tham số là <code>_</code>. Nếu chính bạn thiết kế API, thường tốt hơn là bỏ hẳn tham số đó thay vì để người gọi phải bỏ qua.</div>
         <div class="note"><strong>Lỗi hay gặp:</strong> Go không hỗ trợ function overloading, default arguments, hay named arguments. Bạn không thể khai báo hai hàm cùng tên chỉ khác kiểu tham số.</div>
+        <div class="note"><strong>Trivia:</strong> Nếu bạn thấy một khai báo như <code>func AddInt64(addr *int64, delta int64) int64</code> mà không có <code>{}</code>, đó thường là hàm low-level được implement ở assembly hoặc được toolchain/runtime liên kết từ nơi khác. Đây không phải pattern bình thường trong code ứng dụng.</div>
         <div class="note"><strong>Khi nào dùng:</strong> Tách hàm khi một đoạn logic có thể đặt tên rõ ràng, tái sử dụng được, hoặc giúp flow của code dễ đọc hơn.</div>
       </div>
     </div>
@@ -194,6 +200,10 @@ func (p *Point) Scale(factor float64) {
     p.Y *= factor
 }
 
+func (p *Point) IsNil() bool {
+    return p == nil
+}
+
 // Method expression: receiver là arg đầu tiên
 dist := Point.Distance
 fmt.Println(dist(Point{3, 4})) // 5
@@ -202,10 +212,14 @@ fmt.Println(dist(Point{3, 4})) // 5
 p := &Point{3, 4}
 scale := p.Scale
 scale(2)
-fmt.Println(p) // &{6 8}</code></pre>
+fmt.Println(p) // &{6 8}
+
+var nilPoint *Point
+fmt.Println(nilPoint.IsNil()) // true</code></pre>
         <div class="note"><strong>Ý chính:</strong> Method là function gắn với một receiver type. Đây là cách Go cho phép type có “hành vi” mà không cần class như trong OOP truyền thống.</div>
         <div class="note"><strong>Quy tắc cần nhớ:</strong> Value receiver phù hợp khi method không sửa dữ liệu gốc và type đủ nhỏ để copy hợp lý. Pointer receiver phù hợp khi cần mutate hoặc muốn tránh copy lớn. Nếu biến là addressable value, Go có thể tự lấy địa chỉ để gọi pointer receiver method như <code>p.Scale(2)</code>.</div>
-        <div class="note"><strong>Lỗi hay gặp:</strong> Nếu một type có cả value receiver lẫn pointer receiver lẫn lộn không có chủ ý, method set và interface satisfaction dễ trở nên khó đoán. Nếu bất kỳ method nào thật sự cần pointer receiver, thường nên dùng pointer receiver nhất quán cho cả type.</div>
+        <div class="note"><strong>Nil receiver:</strong> Gọi method trên một pointer receiver đang là <code>nil</code> vẫn là lời gọi hợp lệ nếu chính method đó xử lý được <code>nil</code>. Panic chỉ xảy ra khi thân hàm dereference receiver nil, ví dụ truy cập <code>p.X</code> bên trong <code>Scale</code>.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nếu một type có cả value receiver lẫn pointer receiver lẫn lộn không có chủ ý, method set và interface satisfaction dễ trở nên khó đoán. Nhiều người từ Java/C# cũng tưởng gọi method trên nil pointer sẽ panic ngay, nhưng trong Go điều đó còn tùy thân method có chạm vào dữ liệu bên trong hay không.</div>
         <div class="note"><strong>Khi nào dùng:</strong> Dùng method khi hành vi gắn chặt với dữ liệu của type. Dùng method value khi muốn truyền “một hành vi đã bound sẵn vào object”, còn method expression khi muốn lấy method như một function tổng quát.</div>
       </div>
     </div>

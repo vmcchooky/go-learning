@@ -47,6 +47,31 @@ fmt.Println(cfg)</code></pre>
     </div>
 
     <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Memory padding & alignment</div><div class="topic-desc">thứ tự field ảnh hưởng kích thước struct, padding và footprint bộ nhớ</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">padding</span><span class="tag">alignment</span><span class="tag">unsafe.Sizeof</span><span class="level-badge level-inter">trung cấp</span></div>
+<pre><code class="language-go">type Bad struct {
+    A bool
+    B int64
+    C bool
+}
+
+type Good struct {
+    B int64
+    A bool
+    C bool
+}
+
+fmt.Println(unsafe.Sizeof(Bad{}))  // 24 trên máy 64-bit phổ biến
+fmt.Println(unsafe.Sizeof(Good{})) // 16 trên máy 64-bit phổ biến</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Thứ tự field trong struct ảnh hưởng đến padding do alignment của CPU/ABI. Chỉ đổi vị trí field thôi cũng có thể làm struct tốn ít hoặc nhiều RAM hơn đáng kể.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Một heuristic thường hữu ích là đặt field lớn trước, field nhỏ sau để giảm khoảng trống padding. Tuy nhiên kích thước cụ thể còn phụ thuộc kiến trúc máy, nên hãy đo bằng <code>unsafe.Sizeof</code> thay vì chỉ đoán.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người tối ưu theo “mẹo” này ở mọi nơi. Với struct nhỏ hoặc không được tạo nhiều, lợi ích thực tế có thể không đáng kể; đọc dễ hiểu vẫn quan trọng hơn.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Đáng quan tâm khi struct xuất hiện với số lượng rất lớn, nằm trên hot path, hoặc là phần dữ liệu cốt lõi trong cache/in-memory index.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
       <div class="topic-header"><div><div class="topic-name">Composite literals, copy & pointers</div><div class="topic-desc">keyed literals, positional literals, struct copy, so sánh bằng và con trỏ tới struct</div></div><span class="chevron">▼</span></div>
       <div class="topic-detail">
         <div class="tag-list"><span class="tag">literal</span><span class="tag">copy</span><span class="tag">pointer</span><span class="tag">comparable</span><span class="level-badge level-basic">cơ bản</span></div>
@@ -139,10 +164,12 @@ type ReadWriter interface {
 type UserDTO struct {
     Name  string `json:"name"`
     Email string `json:"email,omitempty"`
+    token string `json:"token"`
     Age   int    `json:"-"`
 }</code></pre>
         <div class="note"><strong>Ý chính:</strong> Go ưu tiên composition hơn inheritance. Embedding cho phép một struct “mang theo” field và method của type khác theo cách đơn giản, rõ ràng hơn mô hình kế thừa nhiều tầng.</div>
         <div class="note"><strong>Quy tắc cần nhớ:</strong> Promoted field/method chỉ là cú pháp thuận tiện; bản chất vẫn là truy cập qua field được embed. Struct tag chỉ là metadata dạng chuỗi, có ý nghĩa khi package khác như <code>encoding/json</code> hoặc ORM đọc chúng bằng reflection.</div>
+        <div class="note"><strong>Bẫy với field viết thường:</strong> Các thư viện dùng reflection như <code>encoding/json</code>, <code>yaml</code>, hay ORM sẽ bỏ qua hoàn toàn field unexported. Gắn tag đúng đến mấy cũng không cứu được một field viết thường như <code>token</code>.</div>
         <div class="note"><strong>Lỗi hay gặp:</strong> Embedding không phải inheritance. Nếu embed nhiều type có field hay method cùng tên, bạn có thể gặp ambiguous selector và phải gọi tường minh qua type bên trong.</div>
         <div class="note"><strong>Khi nào dùng:</strong> Dùng embedding khi muốn tái sử dụng hành vi nhỏ gọn hoặc ghép capability. Dùng struct tag khi cần mô tả cách serialize, validate, map DB, hoặc đọc metadata.</div>
       </div>
@@ -168,11 +195,13 @@ type ReadCloser interface {
 type File struct{}
 
 func (File) Read(p []byte) (int, error) { return 0, io.EOF }
-func (File) Close() error               { return nil }
+func (*File) Close() error              { return nil }
 
-var rc ReadCloser = File{} // implement tự động, không cần từ khóa implements</code></pre>
+// var bad ReadCloser = File{} // ERROR: Close có pointer receiver
+var rc ReadCloser = &File{} // implement tự động, không cần từ khóa implements</code></pre>
         <div class="note"><strong>Ý chính:</strong> Interface trong Go mô tả hành vi chứ không mô tả quan hệ kế thừa. Một type chỉ cần có đủ method là tự động implement interface đó.</div>
         <div class="note"><strong>Quy tắc cần nhớ:</strong> Interface nhỏ thường tốt hơn interface lớn. Một guideline phổ biến là “accept interfaces, return concrete types”: nhận dependency dưới dạng interface nhưng trả concrete type khi hợp lý để API vẫn giàu khả năng dùng.</div>
+        <div class="note"><strong>Quy tắc vàng về receiver:</strong> Nếu method được implement bằng pointer receiver như <code>func (t *T) M()</code>, thì chỉ <code>*T</code> mới thỏa interface đó. Giá trị <code>T</code> không thỏa. Nếu method là value receiver, cả <code>T</code> và <code>*T</code> đều có thể thỏa interface.</div>
         <div class="note"><strong>Lỗi hay gặp:</strong> Người mới hay định nghĩa interface quá sớm hoặc quá to ở nơi consumer không cần. Trong Go, interface thường nên được đặt gần nơi sử dụng hơn là nơi implement.</div>
         <div class="note"><strong>Khi nào dùng:</strong> Dùng interface khi cần thay thế implementation, mock trong test, hoặc mô tả capability như đọc, ghi, log, cache, notify.</div>
       </div>

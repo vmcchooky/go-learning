@@ -46,9 +46,22 @@ func consume(ctx context.Context, jobs &lt;-chan int) {
             }
         }
     }()
+}
+
+func request(ctx context.Context) &lt;-chan string {
+    resultCh := make(chan string, 1) // buffer 1 để sender không kẹt mãi
+    go func() {
+        result := "done"
+        select {
+        case resultCh &lt;- result:
+        case &lt;-ctx.Done():
+        }
+    }()
+    return resultCh
 }</code></pre>
         <div class="note"><strong>Ý chính:</strong> Goroutine là đơn vị concurrency rất nhẹ do runtime Go quản lý. Bạn tạo goroutine bằng từ khóa <code>go</code>, còn <code>WaitGroup</code> giúp chờ một nhóm công việc kết thúc.</div>
         <div class="note"><strong>Quy tắc cần nhớ:</strong> Concurrency không đồng nghĩa với parallelism. <code>WaitGroup</code> chỉ chờ, nó không hủy goroutine và cũng không gom lỗi. Mỗi goroutine nên có đường thoát rõ ràng như <code>close(channel)</code> hoặc <code>ctx.Done()</code>.</div>
+        <div class="note"><strong>Goroutine leak:</strong> Một leak rất phổ biến là goroutine con xử lý xong rồi kẹt vĩnh viễn ở <code>ch &lt;- result</code> vì caller đã timeout và không còn ai receive nữa. Với tác vụ chỉ trả về đúng một kết quả, <code>make(chan T, 1)</code> kết hợp <code>select</code> trên <code>ctx.Done()</code> là pattern rất an toàn.</div>
         <div class="note"><strong>Lỗi hay gặp:</strong> Goroutine rất rẻ nhưng không miễn phí. Nếu goroutine bị kẹt mãi ở send, receive, sleep loop, hay I/O mà không có cơ chế dừng, bạn sẽ tạo goroutine leak.</div>
         <div class="note"><strong>Khi nào dùng:</strong> Dùng goroutine cho các tác vụ độc lập, I/O bound, background work, hoặc chia nhỏ việc cần chạy đồng thời.</div>
       </div>
@@ -89,6 +102,7 @@ default:
 }</code></pre>
         <div class="note"><strong>Ý chính:</strong> Channel là cách Go đồng bộ và truyền dữ liệu giữa goroutines. <code>select</code> cho phép chờ nhiều thao tác channel cùng lúc.</div>
         <div class="note"><strong>Quy tắc cần nhớ:</strong> Thông thường bên gửi là bên đóng channel. Receive từ channel đã đóng sẽ trả về zero value cùng <code>ok = false</code>. Send vào channel đã đóng sẽ panic. Nil channel sẽ block mãi.</div>
+        <div class="note"><strong>Timer trong loop:</strong> <code>time.After</code> rất tiện cho timeout đơn giản. Nhưng nếu bạn gọi nó liên tục trong một <code>for-select</code> chạy dày, mỗi vòng vẫn tạo timer mới. Khi cần timeout lặp lại trên hot path, <code>time.NewTimer</code> và <code>Reset</code> thường kiểm soát tốt hơn và giảm allocation churn.</div>
         <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người trộn <code>default</code> với <code>time.After</code> trong cùng một <code>select</code> rồi tưởng rằng đang chờ timeout, nhưng <code>default</code> sẽ làm <code>select</code> trở thành non-blocking. Ngoài ra, đóng channel từ phía receiver thường là dấu hiệu thiết kế chưa ổn.</div>
         <div class="note"><strong>Khi nào dùng:</strong> Dùng channel khi bạn cần giao tiếp hoặc đồng bộ hóa giữa goroutines. Nếu chỉ cần bảo vệ shared state đơn giản, <code>Mutex</code> thường thẳng và dễ hiểu hơn.</div>
       </div>
@@ -210,7 +224,8 @@ func GetDB() {
 // go test -race ./...</code></pre>
         <div class="note"><strong>Ý chính:</strong> Khi nhiều goroutine cùng truy cập shared memory, bạn cần primitive đồng bộ như <code>Mutex</code> hoặc <code>RWMutex</code>. <code>sync.Once</code> giúp một đoạn init chỉ chạy đúng một lần.</div>
         <div class="note"><strong>Quy tắc cần nhớ:</strong> Map thường không thread-safe cho concurrent read/write. <code>RWMutex</code> chỉ hữu ích khi số reader nhiều hơn write đáng kể. Không copy value chứa mutex sau khi nó đã bắt đầu được dùng. Với wrapper như <code>SafeCounter</code>, bạn cũng phải khởi tạo map bên trong trước khi ghi.</div>
-        <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều bug concurrency không lộ ngay mà chỉ xuất hiện khi tải cao. Hãy chạy <code>go test -race</code> hoặc <code>go run -race</code> khi nghi có data race. <code>sync.Map</code> không phải thay thế mặc định cho mọi map thường.</div>
+        <div class="note"><strong><code>sync.Map</code> vs map thường:</strong> <code>sync.Map</code> là công cụ chuyên biệt, không phải mặc định mới. Nó hợp nhất khi entry thường được ghi một lần rồi đọc rất nhiều, hoặc khi nhiều goroutine thao tác trên các key tách biệt nhau. Ngoài các case đó, <code>map</code> thường bọc <code>Mutex</code>/<code>RWMutex</code> thường giữ type safety và invariant của code dễ hơn.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều bug concurrency không lộ ngay mà chỉ xuất hiện khi tải cao. Hãy chạy <code>go test -race</code> hoặc <code>go run -race</code> khi nghi có data race.</div>
         <div class="note"><strong>Khi nào dùng:</strong> Dùng mutex khi nhiều goroutine cần sửa cùng một state trong memory. Đây thường là lựa chọn đơn giản và đúng hơn so với cố “channel hóa” mọi thứ.</div>
       </div>
     </div>

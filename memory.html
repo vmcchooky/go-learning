@@ -48,6 +48,8 @@ func sum(nums []int) int {
 }</code></pre>
         <div class="note"><strong>Ý chính:</strong> Trong Go, bạn không “chọn stack hay heap” bằng cú pháp. Compiler tự quyết định dựa trên escape analysis: nếu một value cần sống lâu hơn frame hiện tại hoặc compiler không chứng minh được nó an toàn trên stack, value đó sẽ escape lên heap.</div>
         <div class="note"><strong>Quy tắc cần nhớ:</strong> Trả về pointer, lưu vào interface, tạo closure bắt biến, hoặc cấp phát backing array lớn/dynamic đều có thể khiến value escape. Heap không phải là “sai”; vấn đề chỉ xuất hiện khi allocation và GC pressure thật sự trở thành bottleneck.</div>
+        <div class="note"><strong>Value vs pointer:</strong> Đừng mặc định dùng <code>*T</code> chỉ vì sợ copy. Với struct nhỏ hoặc không cần shared mutation, value semantics thường đơn giản hơn, locality tốt hơn, và giảm cơ hội tạo aliasing/escape không cần thiết. Pointer chỉ thực sự đáng khi object lớn, cần mutate state chung, hoặc API tự nhiên đã mang ngữ nghĩa tham chiếu.</div>
+        <div class="note"><strong>Interface boxing:</strong> Khi một value được gói vào <code>any</code> hay interface khác, compiler có thể phải “box” nó và điều đó có thể góp phần tạo allocation ẩn. Đây là một lý do các API hiệu năng cao thường ưu tiên typed parameters thay vì nhận mọi thứ qua <code>any</code>.</div>
         <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người cố viết code kỳ quặc chỉ để ép mọi thứ ở stack. Điều đó thường làm code khó đọc mà lợi ích không đáng kể. Hãy xem output <code>-gcflags=-m</code> như tín hiệu để hiểu compiler, không phải cuộc thi “zero heap allocations” trong mọi nơi.</div>
         <div class="note"><strong>Khi nào dùng:</strong> Dùng escape analysis khi bạn đang điều tra allocation bất ngờ, một benchmark chậm, hoặc nghi ngờ một thay đổi nhỏ làm tăng áp lực GC.</div>
       </div>
@@ -111,6 +113,7 @@ buf = append(buf, "hello"...)
 buf = buf[:0] // reuse scratch buffer nếu vẫn cùng owner</code></pre>
         <div class="note"><strong>Ý chính:</strong> Nhiều bài toán chậm không phải do thuật toán tệ, mà do tạo quá nhiều allocation nhỏ lặp đi lặp lại. Preallocation và reuse đúng chỗ giúp giảm pressure lên allocator và GC rất hiệu quả.</div>
         <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>make([]T, len)</code> tạo ra slice đã có phần tử, còn <code>make([]T, 0, cap)</code> là mẫu chuẩn khi bạn sẽ <code>append</code>. <code>slices.Grow</code> hữu ích khi biết mình sắp append thêm bao nhiêu phần tử. <code>strings.Builder</code> hợp cho ghép string lặp lại.</div>
+        <div class="note"><strong>Unsafe / advanced:</strong> Nếu thật sự cần zero-allocation đổi <code>[]byte -&gt; string</code>, Go hiện đại có <code>unsafe.String(unsafe.SliceData(b), len(b))</code>. Đây là kỹ thuật rất mạnh nhưng string mới sẽ dùng chung vùng nhớ với slice, nên byte slice đó không được mutate nữa khi string còn sống.</div>
         <div class="note"><strong>Lỗi hay gặp:</strong> Preallocate quá lớn cũng là lãng phí memory. Một lỗi khác là tái sử dụng scratch buffer rồi vô tình trả slice đó ra ngoài, khiến caller giữ luôn backing array nội bộ lâu hơn cần thiết.</div>
         <div class="note"><strong>Khi nào dùng:</strong> Dùng trong hot path như parsing, serialization, xử lý text, xây response, hoặc transform list lớn trong vòng lặp.</div>
       </div>

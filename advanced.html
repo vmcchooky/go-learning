@@ -36,12 +36,25 @@ type User struct {
 func inspect(v any) {
     rv := reflect.ValueOf(v)
     rt := reflect.TypeOf(v)
+    if rt == nil {
+        fmt.Println("<nil>")
+        return
+    }
+
     if rt.Kind() == reflect.Pointer {
+        if rv.IsNil() {
+            rt = rt.Elem()
+            fmt.Println(rt.Name(), rt.Kind())
+            return
+        }
         rt = rt.Elem()
         rv = rv.Elem()
     }
 
     fmt.Println(rt.Name(), rt.Kind())
+    if rt.Kind() != reflect.Struct {
+        return
+    }
 
     for _, f := range reflect.VisibleFields(rt) {
         if f.IsExported() {
@@ -54,8 +67,8 @@ func inspect(v any) {
 
 func setName(ptr any, name string) error {
     rv := reflect.ValueOf(ptr)
-    if rv.Kind() != reflect.Pointer || rv.Elem().Kind() != reflect.Struct {
-        return fmt.Errorf("need pointer to struct")
+    if !rv.IsValid() || rv.Kind() != reflect.Pointer || rv.IsNil() || rv.Elem().Kind() != reflect.Struct {
+        return fmt.Errorf("need non-nil pointer to struct")
     }
 
     field := rv.Elem().FieldByName("Name")
@@ -66,7 +79,7 @@ func setName(ptr any, name string) error {
     return nil
 }</code></pre>
         <div class="note"><strong>Ý chính:</strong> Reflection cho phép code đọc hoặc thao tác với type và value ở runtime. Nó rất mạnh cho framework, serializer, validator, ORM, DI container, hoặc tooling, nhưng đổi lại là code khó đọc hơn và dễ panic hơn generics hay interface tường minh.</div>
-        <div class="note"><strong>Quy tắc cần nhớ:</strong> Muốn sửa field qua reflection, value phải addressable và <code>CanSet()</code> phải trả về <code>true</code>. Field không export hoặc value không phải pointer đúng kiểu thường sẽ không set được. <code>VisibleFields</code> hữu ích khi làm việc với embedding và promoted fields.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Muốn sửa field qua reflection, value phải addressable và <code>CanSet()</code> phải trả về <code>true</code>. Field không export hoặc value không phải pointer đúng kiểu thường sẽ không set được. <code>VisibleFields</code> hữu ích khi làm việc với embedding và promoted fields, nhưng chỉ dùng được với <code>struct type</code>.</div>
         <div class="note"><strong>Lỗi hay gặp:</strong> Gọi <code>Elem()</code> sai ngữ cảnh, <code>FieldByName</code> trên field không tồn tại, hoặc <code>Set</code> trên field không settable đều dễ panic. Một lỗi kiến trúc phổ biến hơn là dùng reflection cho bài toán mà interface, generics, hay code generation giải quyết gọn hơn.</div>
         <div class="note"><strong>Khi nào dùng:</strong> Dùng khi bạn thực sự cần meta-programming ở runtime. Nếu chỉ cần tái sử dụng thuật toán giữa nhiều type, hãy ưu tiên generics trước.</div>
       </div>
@@ -102,6 +115,28 @@ fmt.Println("offset Len:", unsafe.Offsetof(h.Len))
         <div class="note"><strong>Quy tắc cần nhớ:</strong> Dữ liệu lấy từ <code>unsafe.StringData</code> không được sửa vì string trong Go là immutable. <code>uintptr</code> không giữ object sống cho GC; nó chỉ là số nguyên. Các phép biến đổi qua <code>unsafe.Pointer</code> phải theo đúng pattern được tài liệu Go cho phép.</div>
         <div class="note"><strong>Lỗi hay gặp:</strong> Người mới hay nhầm “chạy được” với “an toàn”. Nhiều đoạn <code>unsafe</code> có thể chạy ổn hôm nay rồi vỡ ở kiến trúc khác, phiên bản khác, hoặc dưới tải thật. Một lỗi cực nguy hiểm là biến string thành <code>[]byte</code> rồi sửa nội dung như thể đó là bộ nhớ mutable hợp lệ.</div>
         <div class="note"><strong>Đọc sau:</strong> Chỉ dùng <code>unsafe</code> khi bạn đã profile xong, hiểu memory model, và thật sự không có lựa chọn thuần Go an toàn hơn.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Plan 9 Assembly (.s files)</div><div class="topic-desc">bodyless declarations, file .s, ABI low-level và khi nào assembly đáng công hơn pure Go</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">assembly</span><span class="tag">.s</span><span class="tag">Plan 9</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">// file: add.go
+package fast
+
+func Add64(a, b uint64) uint64
+
+// file: add_amd64.s
+TEXT ·Add64(SB), NOSPLIT, $0-24
+    MOVQ a+0(FP), AX
+    ADDQ b+8(FP), AX
+    MOVQ AX, ret+16(FP)
+    RET</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Go hỗ trợ assembly riêng với cú pháp Plan 9 trong các file <code>.s</code>. Đây là vùng cực low-level để đi thẳng tới instruction set của CPU khi compiler thuần Go chưa diễn tả hoặc tối ưu đủ tốt.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> Một hàm được implement bằng assembly thường xuất hiện dưới dạng bodyless declaration ở file Go và phần thân thật nằm trong file <code>.s</code> cùng package. Code kiểu này phụ thuộc chặt vào kiến trúc, ABI, calling convention, và thường đi kèm build constraints.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Assembly Go không giống GNU AT&amp;T hay Intel syntax quen thuộc. Nó khó viết, khó review, và dễ vỡ khi ABI hoặc kiến trúc thay đổi. Chỉ đáng dùng khi profiling cho thấy lợi ích thực sự, ví dụ với crypto, math/bits, SIMD, checksum, hoặc runtime primitives.</div>
+        <div class="note"><strong>Đọc sau:</strong> Nếu bạn mới chạm tới tầng này, hãy đọc source của <code>math/bits</code>, <code>crypto/aes</code>, hoặc <code>runtime</code> trước khi tự viết assembly cho project riêng.</div>
       </div>
     </div>
 
@@ -144,6 +179,7 @@ package fastpath
 //go:linkname localname importpath.name</code></pre>
         <div class="note"><strong>Ý chính:</strong> Build constraints giúp một package có nhiều implementation khác nhau tùy hệ điều hành, kiến trúc, feature level, hoặc môi trường build. Đây là công cụ chuẩn để viết portable code, optional fast paths, hoặc integration-specific files.</div>
         <div class="note"><strong>Quy tắc cần nhớ:</strong> Mỗi file chỉ có tối đa một dòng <code>//go:build</code>, và nó phải ở gần đầu file, trước <code>package</code>, thường kèm một dòng trắng sau đó. Tên file như <code>foo_windows.go</code> hay <code>bar_amd64.go</code> cũng là constraint ngầm. <code>//go:generate</code> không ảnh hưởng chuyện file có được build hay không.</div>
+        <div class="note"><strong>Meta-programming kiểu Go:</strong> Go thường ưu tiên code generation hơn reflection runtime cho các framework cần hiệu năng và type safety. Các tool như <code>stringer</code>, <code>mockgen</code>, <code>wire</code>, hay <code>easyjson</code> thường đọc source qua <code>go/parser</code>, <code>go/ast</code>, <code>go/types</code> rồi sinh ra mã Go thuần để compile cùng project.</div>
         <div class="note"><strong>Lỗi hay gặp:</strong> Nhiều người trộn lẫn build tags với runtime <code>if runtime.GOOS == ...</code>. Nếu hành vi khác nhau ở compile time, hãy tách file thay vì nhồi quá nhiều nhánh vào một file. Ngoài ra, <code>//go:linkname</code> là con dao rất sắc; đừng dùng nếu chưa thật sự hiểu hệ quả.</div>
         <div class="note"><strong>Khi nào dùng:</strong> Dùng khi bạn cần tối ưu theo kiến trúc, hỗ trợ cgo/pure Go song song, hoặc cô lập code chỉ chạy trong test, benchmark, hoặc integration environment.</div>
       </div>
@@ -219,6 +255,44 @@ func TestTimeout(t *testing.T) {
         <div class="note"><strong>Quy tắc cần nhớ:</strong> Table-driven tests vẫn là xương sống. Với benchmark mới, <code>b.Loop()</code> giúp quản lý timer tự nhiên hơn. Fuzz target phải “không panic” và giữ invariant của parser/decoder. <code>synctest</code> hợp khi bạn cần kiểm tra timeout, cancellation, hoặc scheduling mà không muốn chờ thời gian thật.</div>
         <div class="note"><strong>Lỗi hay gặp:</strong> Benchmark đo cả setup/cleanup, fuzz test có side effects lên filesystem không kiểm soát, hoặc test concurrency dựa vào <code>time.Sleep</code> ngẫu hứng nên flaky. Ngoài ra, nhiều người quên dùng <code>-shuffle</code> và <code>-benchmem</code> để bắt coupling ẩn và allocation regressions.</div>
         <div class="note"><strong>Khi nào dùng:</strong> Dùng benchmark cho hot path, fuzz cho parser/input boundary, và <code>synctest</code> cho logic concurrent khó tái hiện ổn định bằng clock thật.</div>
+      </div>
+    </div>
+
+    <div class="topic-card">
+      <div class="topic-header"><div><div class="topic-name">Execution tracer (runtime/trace)</div><div class="topic-desc">timeline nanosecond, goroutine scheduling, block events, GC và lock contention</div></div><span class="chevron">▼</span></div>
+      <div class="topic-detail">
+        <div class="tag-list"><span class="tag">trace</span><span class="tag">timeline</span><span class="tag">goroutine</span><span class="level-badge level-adv">nâng cao</span></div>
+<pre><code class="language-go">import (
+    "context"
+    "os"
+    "runtime/trace"
+)
+
+f, err := os.Create("trace.out")
+if err != nil {
+    return err
+}
+defer f.Close()
+
+if err := trace.Start(f); err != nil {
+    return err
+}
+defer trace.Stop()
+
+ctx, task := trace.NewTask(context.Background(), "importUsers")
+defer task.End()
+
+trace.WithRegion(ctx, "parseCSV", func() {
+    parseCSV()
+})
+trace.Log(ctx, "rows", "10000")
+
+// go tool trace trace.out
+// go test -trace=trace.out ./...</code></pre>
+        <div class="note"><strong>Ý chính:</strong> Nếu <code>pprof</code> giống ảnh chụp tổng quát, thì execution trace giống video timeline của runtime. Nó cho bạn thấy goroutine nào chạy, block, wake up, vào syscall, bị GC ảnh hưởng, hay chờ lock trong từng lát thời gian rất nhỏ.</div>
+        <div class="note"><strong>Quy tắc cần nhớ:</strong> <code>runtime/trace</code> đặc biệt hữu ích khi điều tra latency spikes, lock contention, scheduler stalls, hoặc GC pauses mà CPU/heap profile không kể hết câu chuyện. Bạn có thể ghi trace từ program riêng hoặc dùng thẳng <code>go test -trace</code> cho test/benchmark.</div>
+        <div class="note"><strong>Lỗi hay gặp:</strong> Trace file khá nặng và không nên bật vô tội vạ trong production lâu dài. Ngoài ra, nhiều người mở trace rồi chỉ nhìn tổng quan mà quên gắn thêm <code>trace.NewTask</code>, <code>trace.WithRegion</code>, hay <code>trace.Log</code> để timeline của nghiệp vụ dễ đọc hơn.</div>
+        <div class="note"><strong>Khi nào dùng:</strong> Dùng khi hệ thống “khó thở” mà pprof chưa chỉ ra rõ nghẽn nằm ở CPU, lock, GC, hay scheduling. Đây là công cụ chẩn đoán concurrency và runtime behavior rất cao cấp của Go.</div>
       </div>
     </div>
 
