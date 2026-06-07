@@ -75,6 +75,9 @@ fmt.Println(score, ok) // 100 true
 
 // Named return values
 func minMax(nums []int) (min, max int) {
+    if len(nums) == 0 {
+        return // naked return tự động trả về 0, 0
+    }
     min, max = nums[0], nums[0]
     for _, n := range nums[1:] {
         if n &lt; min { min = n }
@@ -83,7 +86,7 @@ func minMax(nums []int) (min, max int) {
     return // naked return: trả về min, max
 }
 
-_, err = divide(10, 0) // bỏ qua giá trị không cần dùng</code></pre>
+_, _ = divide(10, 0) // bỏ qua hoàn toàn bằng blank identifier</code></pre>
         <div class="note"><strong>Ý chính:</strong> Go cho phép hàm trả về nhiều giá trị, và đây là một trong các idiom quan trọng nhất của ngôn ngữ. Pattern phổ biến nhất là <code>(value, error)</code>.</div>
         <div class="note"><strong>Quy tắc cần nhớ:</strong> Named return values thực chất là các biến đã được khai báo sẵn trong scope của hàm. Chúng hữu ích khi kết hợp với <code>defer</code> hoặc khi tên kết quả giúp code rõ nghĩa hơn. Khi không cần một giá trị trả về, dùng <code>_</code> để bỏ qua.</div>
         <div class="note"><strong>Lỗi hay gặp:</strong> Naked return trong hàm dài dễ làm code khó đọc vì người đọc phải nhớ biến nào đang được trả về. Với hàm ngắn thì ổn, nhưng với hàm dài thường nên return rõ ràng.</div>
@@ -112,7 +115,7 @@ fmt.Println(sum(nums...)) // unpack slice
 type Predicate func(int) bool
 
 func filter(nums []int, fn Predicate) []int {
-    result := []int{}
+    var result []int // idiomatic: dùng nil slice thay vì []int{}
     for _, n := range nums {
         if fn(n) {
             result = append(result, n)
